@@ -5,7 +5,6 @@ import org.example.Dtos.SkillDtos.CreateSkillDto;
 import org.example.Model.Skill;
 import org.example.Repository.SkillRepository;
 import org.example.Service.ISkillService;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 

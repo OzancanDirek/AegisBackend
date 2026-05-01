@@ -52,4 +52,8 @@ public class Resident
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "address_id")
     private Adresses address;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "priority_level")
+    private PriorityLevel priorityLevel;
 }

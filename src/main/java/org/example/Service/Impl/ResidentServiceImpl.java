@@ -2,6 +2,7 @@ package org.example.Service.Impl;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.example.Model.PriorityLevel;
 import org.example.Dtos.ResidentDto.ResidentResponseDto;
 import org.example.Dtos.SpecialNeedsDto.SpecialNeedsResponseDto;
 import org.example.Model.Resident;
@@ -40,6 +41,7 @@ public class ResidentServiceImpl implements IResidentService
         }
 
         resident.setSpecialNeeds(needs);
+        resident.setPriorityLevel(calculatePriority(resident));
         Resident saved = residentRepository.save(resident);
 
         Set<SpecialNeedsResponseDto> needDtos = saved.getSpecialNeeds().stream()
@@ -52,7 +54,8 @@ public class ResidentServiceImpl implements IResidentService
                 saved.getBirthDate(),
                 saved.getGender(),
                 saved.getIdentityNo(),
-                needDtos
+                needDtos,
+                resident.getPriorityLevel()
         );
     }
 
@@ -72,9 +75,44 @@ public class ResidentServiceImpl implements IResidentService
                             resident.getBirthDate(),
                             resident.getGender(),
                             resident.getIdentityNo(),
-                            needDtos
+                            needDtos,
+                            resident.getPriorityLevel()
                     );
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public PriorityLevel calculatePriority(Resident resident)
+    {
+        boolean hasCriticalNeed = resident.getSpecialNeeds() != null &&
+                resident.getSpecialNeeds().stream()
+                        .anyMatch(x -> x.getNeedName() != null &&
+                                x.getNeedName().toLowerCase().contains("ilaç"));
+
+        boolean hasAnyNeed = resident.getSpecialNeeds() != null && !resident.getSpecialNeeds().isEmpty();
+
+        Integer age = null;
+
+        if (resident.getBirthDate() != null)
+        {
+            age = java.time.Period
+                    .between(resident.getBirthDate(), java.time.LocalDate.now())
+                    .getYears();
+        }
+
+        // critical her şeyden önce gelir
+        if (hasCriticalNeed)
+            return PriorityLevel.CRITICAL;
+
+        // yaş varsa HIGH
+        if (age != null && age > 65 && hasAnyNeed)
+            return PriorityLevel.HIGH;
+
+        // sadece ihtiyac girdiysem
+        if (hasAnyNeed)
+            return PriorityLevel.MEDIUM;
+
+        return PriorityLevel.LOW;
     }
 }

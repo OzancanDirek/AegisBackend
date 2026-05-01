@@ -2,34 +2,49 @@ package org.example.Controller;
 
 import lombok.RequiredArgsConstructor;
 import org.example.Dtos.LoginDto;
-import org.example.Dtos.RegisterDto;
-import org.example.Service.Impl.UserServiceImpl;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.example.Security.JwtUtil;
+import org.example.Service.IUserService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:5173")
 @RequiredArgsConstructor
 public class LoginController
 {
-    private final UserServiceImpl userService;
+
+    private final IUserService userService;
+    private final JwtUtil jwtUtil;
 
     @PostMapping("/login")
-    public Map<String, String> login(@RequestBody LoginDto loginDto)
+    public ResponseEntity<Map<String, String>> login(@RequestBody LoginDto loginDto)
     {
-        return userService.login(loginDto);
+        return ResponseEntity.ok(userService.login(loginDto));
     }
 
     @PostMapping("/register")
-    public Map<String, String> register(@RequestBody RegisterDto registerDto)
+    public ResponseEntity<Map<String, String>> register(@RequestBody org.example.Dtos.RegisterDto registerDto)
     {
-        return userService.register(registerDto);
+        return ResponseEntity.ok(userService.register(registerDto));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<Map<String, String>> refresh(@RequestBody Map<String, String> body)
+    {
+        String refreshToken = body.get("refreshToken");
+
+        if (refreshToken == null || !jwtUtil.isTokenValid(refreshToken))
+        {
+            return ResponseEntity.status(401).body(Map.of("message", "Geçersiz veya süresi dolmuş refresh token"));
+        }
+
+        String email = jwtUtil.extractEmail(refreshToken);
+        String role = userService.getRoleByEmail(email);
+
+        String newAccessToken = jwtUtil.generateAccessToken(email, role);
+
+        return ResponseEntity.ok(Map.of("accessToken", newAccessToken));
     }
 }

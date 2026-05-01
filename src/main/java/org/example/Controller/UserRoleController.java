@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/UserRole")
@@ -24,8 +25,8 @@ public class UserRoleController
 
     @PostMapping("/assign")
     public Map<String, String> assignRole(
-            @RequestParam String userId,
-            @RequestParam String roleId
+            @RequestParam UUID userId,
+            @RequestParam UUID roleId
     )
     {
         return userRoleService.assignRoleToUser(userId, roleId);
@@ -38,7 +39,7 @@ public class UserRoleController
     }
 
     @GetMapping("/user/{userId}")
-    public Map<String, Object> getUserRoles(@PathVariable String userId)
+    public Map<String, Object> getUserRoles(@PathVariable UUID userId)
     {
         return userRoleService.getUserRoles(userId);
     }

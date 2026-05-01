@@ -10,6 +10,7 @@ import org.example.Service.IUserRoleService;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -19,7 +20,7 @@ public class UserRoleServiceImpl implements IUserRoleService
     private final RoleRepository roleRepository;
 
     @Override
-    public Map<String, String> assignRoleToUser(String userId, String roleId)
+    public Map<String, String> assignRoleToUser(UUID userId, UUID roleId)
     {
         Users user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User bulunamadi"));
@@ -42,7 +43,7 @@ public class UserRoleServiceImpl implements IUserRoleService
     }
 
     @Override
-    public Map<String, Object> getUserRoles(String userId)
+    public Map<String, Object> getUserRoles(UUID userId)
     {
         Users user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User bulunamadı"));

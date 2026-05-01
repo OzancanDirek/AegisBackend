@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.util.Set;
 
 import org.example.Dtos.SpecialNeedsDto.SpecialNeedsResponseDto;
+import org.example.Model.PriorityLevel;
 
 @Getter
 @Setter
@@ -19,4 +20,6 @@ public class ResidentResponseDto
     private String gender;
     private String identityNo;
     private Set<SpecialNeedsResponseDto> specialNeeds;
+
+    private PriorityLevel priorityLevel;
 }

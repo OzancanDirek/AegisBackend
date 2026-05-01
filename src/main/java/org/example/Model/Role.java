@@ -2,7 +2,10 @@ package org.example.Model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.JdbcTypeCode;
+
+import java.sql.Types;
+import java.util.UUID;
 
 @Entity
 @Table(name = "roles")
@@ -15,22 +18,13 @@ public class Role
 {
 
     @Id
-    @GeneratedValue(generator = "UUID")
-    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
-    @Column(name = "role_id", updatable = false, nullable = false)
-    private String roleId;
+    @GeneratedValue
+    @JdbcTypeCode(Types.VARCHAR)
+    @Column(name = "role_id", updatable = false, nullable = false, columnDefinition = "CHAR(36)")
+    private UUID roleId;
 
     @Column(name = "role_name", unique = true, nullable = false, length = 50)
     private String roleName;
 
     private String description;
-
-    @PrePersist
-    protected void onCreate()
-    {
-        if (this.roleId == null)
-        {
-            this.roleId = java.util.UUID.randomUUID().toString();
-        }
-    }
 }

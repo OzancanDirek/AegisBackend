@@ -9,4 +9,6 @@ public interface IUserService
 {
     Map<String, String> login(LoginDto dto);
     Map<String, String> register(RegisterDto registerDto);
+    public String getRoleByEmail(String email);
+
 }
