@@ -37,20 +37,15 @@ public class SecurityConfig
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Auth klasörü altındaki her şeye (login, register, refresh) izin ver
                         .requestMatchers("/api/auth/**").permitAll()
-
-                        // Roller ve Admin işlemleri sadece ADMIN olanlara açık olsun
                         .requestMatchers("/api/UserRole/**").hasRole("Admin")
                         .requestMatchers("/api/admin/**").hasRole("Admin")
-
-                        // Adresler, Gönüllüler vb. giriş yapmış herhangi biri için açık olsun
                         .requestMatchers("/api/addresses/**").authenticated()
                         .requestMatchers("/api/volunteer/**").authenticated()
                         .requestMatchers("/api/skill/**").authenticated()
                         .requestMatchers("/api/warehouse/**").authenticated()
-
-                        // Geri kalan her şey için sadece giriş yapmış olmak yetsin
+                        .requestMatchers("/api/announcements/**").authenticated()
+                        .requestMatchers("/api/aid-requests/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

@@ -56,4 +56,5 @@ public class Resident
     @Enumerated(EnumType.STRING)
     @Column(name = "priority_level")
     private PriorityLevel priorityLevel;
+
 }
