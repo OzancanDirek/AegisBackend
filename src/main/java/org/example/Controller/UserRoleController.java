@@ -1,15 +1,14 @@
 package org.example.Controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.example.Dtos.RoleDto.CreateRoleRequest;
+import org.example.Dtos.RoleDto.RoleResult;
+import org.example.Dtos.RoleDto.UpdateRoleRequest;
 import org.example.Repository.UserRepository;
 import org.example.Service.IUserRoleService;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.UUID;
@@ -48,5 +47,33 @@ public class UserRoleController
     public Map<String, Object> getUserList()
     {
         return Map.of("users", userRepository.findAll());
+    }
+
+
+    @PostMapping("/roles")
+    public ResponseEntity<RoleResult> createRole(@Valid @RequestBody CreateRoleRequest request)
+    {
+        RoleResult result = userRoleService.createRole(request);
+        return result.isSuccess()
+                ? ResponseEntity.ok(result)
+                : ResponseEntity.badRequest().body(result);
+    }
+
+    @PutMapping("/roles")
+    public ResponseEntity<RoleResult> updateRole(@Valid @RequestBody UpdateRoleRequest request)
+    {
+        RoleResult result = userRoleService.updateRole(request);
+        return result.isSuccess()
+                ? ResponseEntity.ok(result)
+                : ResponseEntity.badRequest().body(result);
+    }
+
+    @DeleteMapping("/roles/{roleId}")
+    public ResponseEntity<RoleResult> deleteRole(@PathVariable UUID roleId)
+    {
+        RoleResult result = userRoleService.deleteRole(roleId);
+        return result.isSuccess()
+                ? ResponseEntity.ok(result)
+                : ResponseEntity.badRequest().body(result);
     }
 }

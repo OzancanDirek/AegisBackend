@@ -1,10 +1,11 @@
-package com.aegis.entity;
+package org.example.Model;
 
 import jakarta.persistence.*;
 import lombok.*;
 import org.example.Model.AidRequest;
 import org.example.Model.Team;
 import org.example.Model.Volunteer;
+import org.example.Model.enums.AssignmentStatus;
 
 import java.time.LocalDateTime;
 
@@ -43,6 +44,11 @@ public class AidAssignment
 
     @Column(columnDefinition = "TEXT")
     private String notes;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    @Builder.Default
+    private AssignmentStatus status = AssignmentStatus.PENDING;
 
     @PrePersist
     protected void onCreate()

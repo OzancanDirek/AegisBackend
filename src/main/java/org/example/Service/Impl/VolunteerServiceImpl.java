@@ -4,9 +4,11 @@ import lombok.RequiredArgsConstructor;
 import org.example.Dtos.VolunteerDtos.CreateVolunteerDto;
 import org.example.Dtos.VolunteerDtos.ResultVolunteerDto;
 import org.example.Model.Adresses;
+import org.example.Model.Role;
 import org.example.Model.Skill;
 import org.example.Model.Users;
 import org.example.Model.Volunteer;
+import org.example.Repository.RoleRepository;
 import org.example.Repository.UserRepository;
 import org.example.Repository.VolunteerRepository;
 import org.example.Service.IVolunteerService;
@@ -15,6 +17,7 @@ import org.example.Repository.AddressRepository;
 
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,6 +27,7 @@ public class VolunteerServiceImpl implements IVolunteerService
     private final VolunteerRepository volunteerRepository;
     private final UserRepository userRepository;
     private final AddressRepository _adressesRepository;
+    private final RoleRepository roleRepository;
 
     private ResultVolunteerDto mapToDto(Volunteer volunteer)
     {
@@ -110,6 +114,17 @@ public class VolunteerServiceImpl implements IVolunteerService
             volunteer.setSkills(skills);
         }
 
+        if (volunteer.getUser() != null)
+        {
+            Users user = volunteer.getUser();
+            Role volunteerRole = roleRepository.findByRoleName("Gonullu").orElse(null);
+            if (volunteerRole != null)
+            {
+                user.getRoles().clear();
+                user.getRoles().add(volunteerRole);
+                userRepository.save(user);
+            }
+        }
         return volunteerRepository.save(volunteer);
     }
 
@@ -158,4 +173,12 @@ public class VolunteerServiceImpl implements IVolunteerService
                 .map(this::mapToDto)
                 .toList();
     }
+
+    @Override
+    public ResultVolunteerDto getVolunteerProfile(UUID userId)
+    {
+        Volunteer volunteer = volunteerRepository.findByUser_UserId(userId).orElseThrow(() -> new RuntimeException("Volunteer not found"));
+        return getVolunteerById(volunteer.getVolunteerId());
+    }
+
 }

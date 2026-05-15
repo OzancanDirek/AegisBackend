@@ -3,12 +3,15 @@ package org.example.Service.Impl;
 import lombok.RequiredArgsConstructor;
 import org.example.Dtos.LoginDto;
 import org.example.Dtos.RegisterDto;
+import org.example.Dtos.UserDto.UpdateUserRequest;
+import org.example.Dtos.UserDto.UserProfileResponse;
 import org.example.Model.Adresses;
 import org.example.Model.Role;
 import org.example.Model.Users;
 import org.example.Repository.AddressRepository;
 import org.example.Repository.RoleRepository;
 import org.example.Repository.UserRepository;
+import org.example.Repository.VolunteerRepository;
 import org.example.Security.JwtUtil;
 import org.example.Service.IUserService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +32,7 @@ public class UserServiceImpl implements IUserService
     private final RoleRepository roleRepository;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
+    private final VolunteerRepository volunteerRepository;
 
     @Override
     public Map<String, String> login(LoginDto loginDto)
@@ -55,7 +60,9 @@ public class UserServiceImpl implements IUserService
                     "refreshToken", refreshToken,
                     "role", role,
                     "email", user.getEmail(),
-                    "name", user.getName() != null ? user.getName() : ""
+                    "name", user.getName() != null ? user.getName() : "",
+                    "userId", user.getUserId().toString(),
+                    "addressId", user.getAddress() != null ? user.getAddress().getAddressId().toString() : ""
             );
         }
         catch (Exception e)
@@ -112,5 +119,52 @@ public class UserServiceImpl implements IUserService
                 .findFirst()
                 .map(Role::getRoleName)
                 .orElse("User");
+    }
+
+    @Override
+    public UserProfileResponse getProfile(UUID userId)
+    {
+        Users user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Kullanıcı bulunamadı"));
+
+        UserProfileResponse response = UserProfileResponse.builder()
+                .userId(user.getUserId())
+                .name(user.getName())
+                .surname(user.getSurname())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .role(user.getRoles().stream().findFirst().map(r -> r.getRoleName()).orElse("User"))
+                .city(user.getAddress() != null ? user.getAddress().getCity() : null)
+                .district(user.getAddress() != null ? user.getAddress().getDistrict() : null)
+                .build();
+
+        volunteerRepository.findByUser_UserId(userId).ifPresent(volunteer -> {
+            response.setVolunteerId(volunteer.getVolunteerId());
+            response.setAvailabilityStatus(volunteer.getAvailabilityStatus());
+            response.setTransportType(volunteer.getTransportType());
+            response.setMaxDistanceKm(volunteer.getMaxDistanceKm());
+            response.setSkills(volunteer.getSkills() != null
+                    ? volunteer.getSkills().stream()
+                    .map(s -> s.getSkillName())
+                    .collect(java.util.stream.Collectors.toList())
+                    : null);
+        });
+
+        return response;
+    }
+
+    @Override
+    public UserProfileResponse updateProfile(UUID userId, UpdateUserRequest request)
+    {
+        Users user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Kullanıcı bulunamadı"));
+
+        if (request.getName() != null) user.setName(request.getName());
+        if (request.getSurname() != null) user.setSurname(request.getSurname());
+        if (request.getPhone() != null) user.setPhone(request.getPhone());
+
+        userRepository.save(user);
+
+        return getProfile(userId);
     }
 }

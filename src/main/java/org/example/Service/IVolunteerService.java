@@ -5,6 +5,7 @@ import org.example.Dtos.VolunteerDtos.ResultVolunteerDto;
 import org.example.Model.Volunteer;
 
 import java.util.List;
+import java.util.UUID;
 
 public interface IVolunteerService
 {
@@ -19,4 +20,7 @@ public interface IVolunteerService
     List<ResultVolunteerDto> findAvailableVolunteers();
 
     List<ResultVolunteerDto> findBySkill(String skillName);
+
+    ResultVolunteerDto getVolunteerProfile(UUID userId);
+
 }

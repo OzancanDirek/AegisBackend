@@ -13,8 +13,8 @@ public class JwtUtil
     //Not normal tokenı 15 dakika verdim yenilenecek token ise 7 tgun boyunca sistemde tutacak kullanıcıyı
 
     private static final String SECRET = "aegis-super-secret-key-must-be-32chars!";
-    private static final long ACCESS_TOKEN_EXPIRY = 1000L * 60 * 15;           // 15 dakika
-    private static final long REFRESH_TOKEN_EXPIRY = 1000L * 60 * 60 * 24 * 7; // 7 gün
+    private static final long ACCESS_TOKEN_EXPIRY  = 1000 * 60 * 60;      // 1 saat
+    private static final long REFRESH_TOKEN_EXPIRY = 1000 * 60 * 60 * 24 * 7; // 7 gün
 
     private Key getKey()
     {
