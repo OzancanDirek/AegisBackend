@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class UserController
 {
-    //denemece
     private final IUserService userService;
     private final UserRepository userRepository;
 
