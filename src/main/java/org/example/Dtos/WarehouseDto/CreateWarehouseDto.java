@@ -30,4 +30,6 @@ public class CreateWarehouseDto
     private String city;
     private String district;
     private String neighborhood;
+    private BigDecimal latitude;
+    private BigDecimal longitude;
 }

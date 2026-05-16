@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.Dtos.WarehouseDto.CreateWarehouseDto;
 import org.example.Dtos.WarehouseDto.ResultWarehouseDto;
 import org.example.Dtos.WarehouseDto.UpdateWarehouseDto;
+import org.example.Model.Users;
 import org.example.Service.IWarehouseService;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -47,5 +48,11 @@ public class WarehouseController
     public ResultWarehouseDto updateWarehouse(@PathVariable Integer id, @RequestBody UpdateWarehouseDto updateWarehouseDto)
     {
         return warehouseService.updateWarehouse(id, updateWarehouseDto);
+    }
+
+    @GetMapping("/warehouse-managers")
+    public List<Users> getWarehouseManagers()
+    {
+        return warehouseService.getWarehouseManagers();
     }
 }
