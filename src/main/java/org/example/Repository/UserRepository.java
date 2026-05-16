@@ -14,5 +14,5 @@ public interface UserRepository extends JpaRepository<Users, UUID>
     Optional<Users> findByEmail(String email);
 
     @Query("SELECT u FROM Users u JOIN u.roles r WHERE r.roleName = :roleName")
-    List<Users> findAllByRoleName(@Param("roleName") String roleName);
+    List<Users> findByRoleNameWareHouseManager(@Param("roleName") String roleName);
 }
