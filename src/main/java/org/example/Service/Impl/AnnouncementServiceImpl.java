@@ -8,6 +8,7 @@ import org.example.Model.Users;
 import org.example.Repository.AnnouncementRepository;
 import org.example.Repository.UserRepository;
 import org.example.Service.IAnnouncementService;
+import org.example.Service.IAuditService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,6 +19,7 @@ public class AnnouncementServiceImpl implements IAnnouncementService
 {
     private final AnnouncementRepository announcementRepository;
     private final UserRepository userRepository;
+    private final IAuditService auditService;
 
     @Override
     public AnnouncementResponseDto createAnnouncement(AnnouncementRequestDto dto, String createdByEmail)
@@ -34,44 +36,60 @@ public class AnnouncementServiceImpl implements IAnnouncementService
                 .build();
 
         Announcement saved = announcementRepository.save(announcement);
+
+        auditService.log(
+                createdByEmail,
+                "CREATE",
+                "ANNOUNCEMENT",
+                saved.getId(),
+                "\"" + saved.getTitle() + "\" duyurusu oluşturuldu" +
+                        (saved.getTargetRole() != null ? " → " + saved.getTargetRole() : " → Herkese")
+        );
+
         return mapToDto(saved);
+    }
+
+    @Override
+    public void delete(String id)
+    {
+        announcementRepository.findById(id).ifPresent(a ->
+                auditService.log(
+                        "system",
+                        "DELETE",
+                        "ANNOUNCEMENT",
+                        id,
+                        "\"" + a.getTitle() + "\" duyurusu silindi"
+                )
+        );
+
+        announcementRepository.deleteById(id);
     }
 
     @Override
     public List<AnnouncementResponseDto> getForRole(String role)
     {
         return announcementRepository.findByTargetRoleOrNull(role)
-                .stream()
-                .map(this::mapToDto)
-                .toList();
+                .stream().map(this::mapToDto).toList();
     }
 
     @Override
     public List<AnnouncementResponseDto> getTop5ForRole(String role)
     {
         return announcementRepository.findTop5ByTargetRoleOrNull(role)
-                .stream()
-                .map(this::mapToDto)
-                .toList();
+                .stream().map(this::mapToDto).toList();
     }
 
-    @Override
-    public void delete(String id)
-    {
-        announcementRepository.deleteById(id);
-    }
-
-    private AnnouncementResponseDto mapToDto(Announcement announcement)
+    private AnnouncementResponseDto mapToDto(Announcement a)
     {
         return AnnouncementResponseDto.builder()
-                .id(announcement.getId())
-                .title(announcement.getTitle())
-                .message(announcement.getMessage())
-                .type(announcement.getType().name())
-                .targetRole(announcement.getTargetRole())
-                .createdByName(announcement.getCreatedBy().getName() + " " + announcement.getCreatedBy().getSurname())
-                .createdByEmail(announcement.getCreatedBy().getEmail())
-                .createdAt(announcement.getCreatedAt())
+                .id(a.getId())
+                .title(a.getTitle())
+                .message(a.getMessage())
+                .type(a.getType().name())
+                .targetRole(a.getTargetRole())
+                .createdByName(a.getCreatedBy().getName() + " " + a.getCreatedBy().getSurname())
+                .createdByEmail(a.getCreatedBy().getEmail())
+                .createdAt(a.getCreatedAt())
                 .build();
     }
 }

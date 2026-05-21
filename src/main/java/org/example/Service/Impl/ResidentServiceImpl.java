@@ -10,6 +10,9 @@ import org.example.Model.SpecialNeeds;
 import org.example.Repository.ResidentRepository;
 import org.example.Repository.SpecialNeedRepository;
 import org.example.Service.IResidentService;
+import org.example.Service.IAuditService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
@@ -23,12 +26,18 @@ public class ResidentServiceImpl implements IResidentService
 {
     private final ResidentRepository residentRepository;
     private final SpecialNeedRepository specialNeedRepository;
+    private final IAuditService auditService;
+
+    private String currentUserEmail()
+    {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null ? auth.getName() : "unknown";
+    }
 
     @Override
     @Transactional
     public ResidentResponseDto addSpecialNeeds(Integer residentId, List<Integer> needIds)
     {
-
         Resident resident = residentRepository.findById(residentId)
                 .orElseThrow(() -> new RuntimeException("Resident bulunamadı: " + residentId));
 
@@ -43,6 +52,14 @@ public class ResidentServiceImpl implements IResidentService
         resident.setSpecialNeeds(needs);
         resident.setPriorityLevel(calculatePriority(resident));
         Resident saved = residentRepository.save(resident);
+
+        auditService.log(
+                currentUserEmail(),
+                "UPDATE",
+                "RESIDENT",
+                String.valueOf(residentId),
+                saved.getFullName() + " için özel ihtiyaçlar güncellendi — Öncelik: " + saved.getPriorityLevel().name()
+        );
 
         Set<SpecialNeedsResponseDto> needDtos = saved.getSpecialNeeds().stream()
                 .map(n -> new SpecialNeedsResponseDto(n.getNeedId(), n.getNeedName()))
@@ -93,7 +110,6 @@ public class ResidentServiceImpl implements IResidentService
         boolean hasAnyNeed = resident.getSpecialNeeds() != null && !resident.getSpecialNeeds().isEmpty();
 
         Integer age = null;
-
         if (resident.getBirthDate() != null)
         {
             age = java.time.Period
@@ -101,18 +117,9 @@ public class ResidentServiceImpl implements IResidentService
                     .getYears();
         }
 
-        // critical her şeyden önce gelir
-        if (hasCriticalNeed)
-            return PriorityLevel.CRITICAL;
-
-        // yaş varsa HIGH
-        if (age != null && age > 65 && hasAnyNeed)
-            return PriorityLevel.HIGH;
-
-        // sadece ihtiyac girdiysem
-        if (hasAnyNeed)
-            return PriorityLevel.MEDIUM;
-
+        if (hasCriticalNeed) return PriorityLevel.CRITICAL;
+        if (age != null && age > 65 && hasAnyNeed) return PriorityLevel.HIGH;
+        if (hasAnyNeed) return PriorityLevel.MEDIUM;
         return PriorityLevel.LOW;
     }
 }

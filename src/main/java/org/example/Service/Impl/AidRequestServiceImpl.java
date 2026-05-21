@@ -11,15 +11,17 @@ import org.example.Model.AidRequestType;
 import org.example.Model.HouseHold;
 import org.example.Model.Resident;
 import org.example.Model.Users;
+import org.example.Model.PriorityLevel;
 import org.example.Repository.AidRequestTypeRepository;
 import org.example.Repository.HouseHoldRepository;
 import org.example.Repository.RequestRepository;
 import org.example.Repository.ResidentRepository;
 import org.example.Repository.UserRepository;
 import org.example.Service.IAidRequestService;
+import org.example.Service.IAuditService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.example.Model.PriorityLevel;
-
 
 import java.util.List;
 import java.util.UUID;
@@ -34,6 +36,13 @@ public class AidRequestServiceImpl implements IAidRequestService
     private final HouseHoldRepository houseHoldRepository;
     private final UserRepository userRepository;
     private final ResidentRepository residentRepository;
+    private final IAuditService auditService;
+
+    private String currentUserEmail()
+    {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null ? auth.getName() : "unknown";
+    }
 
     @Override
     public AidRequestResponseDto createAidRequest(CreateAidRequestDto dto)
@@ -52,7 +61,17 @@ public class AidRequestServiceImpl implements IAidRequestService
                 .status(AidRequest.RequestStatus.PENDING)
                 .build();
 
-        return toDto(aidRequestRepository.save(aidRequest));
+        AidRequest saved = aidRequestRepository.save(aidRequest);
+
+        auditService.log(
+                currentUserEmail(),
+                "CREATE",
+                "AID_REQUEST",
+                String.valueOf(saved.getRequestId()),
+                type.getTypeName() + " talebi oluşturuldu — Aciliyet: " + saved.getUrgencyLevel()
+        );
+
+        return toDto(saved);
     }
 
     @Override
@@ -61,11 +80,79 @@ public class AidRequestServiceImpl implements IAidRequestService
         AidRequest request = aidRequestRepository.findById(dto.getRequestId())
                 .orElseThrow(() -> new RuntimeException("Talep bulunamadı: " + dto.getRequestId()));
 
+        String oldStatus = request.getStatus().name();
+
         if (dto.getStatus() != null) request.setStatus(dto.getStatus());
         if (dto.getUrgencyLevel() != null) request.setUrgencyLevel(dto.getUrgencyLevel());
         if (dto.getDescription() != null) request.setDescription(dto.getDescription());
 
-        return toDto(aidRequestRepository.save(request));
+        AidRequest saved = aidRequestRepository.save(request);
+
+        auditService.log(
+                currentUserEmail(),
+                "UPDATE",
+                "AID_REQUEST",
+                String.valueOf(dto.getRequestId()),
+                "Durum: " + oldStatus + " → " + saved.getStatus().name()
+        );
+
+        return toDto(saved);
+    }
+
+    @Override
+    public void deleteAidRequest(Integer requestId)
+    {
+        auditService.log(
+                currentUserEmail(),
+                "DELETE",
+                "AID_REQUEST",
+                String.valueOf(requestId),
+                "Yardım talebi silindi"
+        );
+
+        aidRequestRepository.deleteById(requestId);
+    }
+
+    @Override
+    public HouseholdResponseDto createHousehold(UUID userId, CreateHouseholdDto dto)
+    {
+        HouseHold household = HouseHold.builder()
+                .householdName(dto.getHouseholdName())
+                .emergencyContactName(dto.getEmergencyContactName())
+                .emergencyContactPhone(dto.getEmergencyContactPhone())
+                .notes(dto.getNotes())
+                .build();
+        household = houseHoldRepository.save(household);
+
+        Resident resident = residentRepository.findByUser_UserId(userId)
+                .orElseGet(() -> {
+                    Users user = userRepository.findById(userId)
+                            .orElseThrow(() -> new RuntimeException("Kullanıcı bulunamadı"));
+                    Resident newResident = new Resident();
+                    newResident.setUser(user);
+                    newResident.setFullName(user.getName() + " " + user.getSurname());
+                    newResident.setPriorityLevel(PriorityLevel.MEDIUM);
+                    return newResident;
+                });
+
+        resident.setHousehold(household);
+        residentRepository.save(resident);
+
+        auditService.log(
+                currentUserEmail(),
+                "CREATE",
+                "HOUSEHOLD",
+                String.valueOf(household.getHouseholdId()),
+                household.getHouseholdName() + " hanesi oluşturuldu"
+        );
+
+        return HouseholdResponseDto.builder()
+                .householdId(household.getHouseholdId())
+                .householdName(household.getHouseholdName())
+                .emergencyContactName(household.getEmergencyContactName())
+                .emergencyContactPhone(household.getEmergencyContactPhone())
+                .notes(household.getNotes())
+                .build();
     }
 
     @Override
@@ -96,12 +183,6 @@ public class AidRequestServiceImpl implements IAidRequestService
     }
 
     @Override
-    public void deleteAidRequest(Integer requestId)
-    {
-        aidRequestRepository.deleteById(requestId);
-    }
-
-    @Override
     public HouseholdResponseDto getMyHousehold(UUID userId)
     {
         return residentRepository.findByUser_UserId(userId)
@@ -115,40 +196,6 @@ public class AidRequestServiceImpl implements IAidRequestService
                         .notes(h.getNotes())
                         .build())
                 .orElse(null);
-    }
-
-    @Override
-    public HouseholdResponseDto createHousehold(UUID userId, CreateHouseholdDto dto)
-    {
-        HouseHold household = HouseHold.builder()
-                .householdName(dto.getHouseholdName())
-                .emergencyContactName(dto.getEmergencyContactName())
-                .emergencyContactPhone(dto.getEmergencyContactPhone())
-                .notes(dto.getNotes())
-                .build();
-        household = houseHoldRepository.save(household);
-
-        Resident resident = residentRepository.findByUser_UserId(userId)
-                .orElseGet(() -> {
-                    Users user = userRepository.findById(userId)
-                            .orElseThrow(() -> new RuntimeException("Kullanıcı bulunamadı"));
-                    Resident newResident = new Resident();
-                    newResident.setUser(user);
-                    newResident.setFullName(user.getName() + " " + user.getSurname());
-                    newResident.setPriorityLevel(PriorityLevel.MEDIUM);
-                    return newResident;
-                });
-
-        resident.setHousehold(household);
-        residentRepository.save(resident);
-
-        return HouseholdResponseDto.builder()
-                .householdId(household.getHouseholdId())
-                .householdName(household.getHouseholdName())
-                .emergencyContactName(household.getEmergencyContactName())
-                .emergencyContactPhone(household.getEmergencyContactPhone())
-                .notes(household.getNotes())
-                .build();
     }
 
     private AidRequestResponseDto toDto(AidRequest r)

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.Model.Users;
 import org.example.Repository.UserRepository;
 import org.example.Service.IAdminService;
+import org.example.Service.IAuditService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -15,6 +16,7 @@ import java.util.stream.Collectors;
 public class AdminserviceImpl implements IAdminService
 {
     private final UserRepository userRepository;
+    private final IAuditService auditService;
 
     public List<Users> adminUserList(String email)
     {
@@ -31,6 +33,14 @@ public class AdminserviceImpl implements IAdminService
         {
             throw new RuntimeException("Yetkiniz yok. Rolleriniz: " + currentUser.getRoles());
         }
+
+        auditService.log(
+                email,
+                "VIEW",
+                "USER_LIST",
+                null,
+                "Admin kullanıcı listesini görüntüledi"
+        );
         return userRepository.findAll();
     }
 }

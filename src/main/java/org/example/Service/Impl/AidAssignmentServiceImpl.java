@@ -15,6 +15,9 @@ import org.example.Repository.AidRequestRepository;
 import org.example.Repository.TeamRepository;
 import org.example.Repository.VolunteerRepository;
 import org.example.Service.IAidAssignmentService;
+import org.example.Service.IAuditService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -29,53 +32,35 @@ public class AidAssignmentServiceImpl implements IAidAssignmentService
     private final AidRequestRepository aidRequestRepository;
     private final VolunteerRepository volunteerRepository;
     private final TeamRepository teamRepository;
+    private final IAuditService auditService;
+
+    private String currentUserEmail()
+    {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null ? auth.getName() : "unknown";
+    }
 
     @Override
     public AssignmentResult createAssignment(CreateAidAssignmentRequest request)
     {
         if (request.getVolunteerId() == null && request.getTeamId() == null)
-        {
-            return AssignmentResult.builder()
-                    .success(false)
-                    .message("Gönüllü veya ekip seçilmesi zorunludur")
-                    .build();
-        }
+            return AssignmentResult.builder().success(false).message("Gönüllü veya ekip seçilmesi zorunludur").build();
 
         AidRequest aidRequest = aidRequestRepository.findById(request.getRequestId()).orElse(null);
         if (aidRequest == null)
-        {
-            return AssignmentResult.builder()
-                    .success(false)
-                    .message("Yardım talebi bulunamadi")
-                    .build();
-        }
+            return AssignmentResult.builder().success(false).message("Yardım talebi bulunamadi").build();
 
         if (aidRequest.getStatus() == AidRequest.RequestStatus.ASSIGNED || aidRequest.getStatus() == AidRequest.RequestStatus.IN_PROGRESS)
-        {
-            return AssignmentResult.builder()
-                    .success(false)
-                    .message("Bu talep zaten atanmış durumda")
-                    .build();
-        }
+            return AssignmentResult.builder().success(false).message("Bu talep zaten atanmış durumda").build();
 
         Volunteer volunteer = null;
         if (request.getVolunteerId() != null)
         {
             volunteer = volunteerRepository.findById(request.getVolunteerId()).orElse(null);
             if (volunteer == null)
-            {
-                return AssignmentResult.builder()
-                        .success(false)
-                        .message("Gönüllü bulunamadı")
-                        .build();
-            }
+                return AssignmentResult.builder().success(false).message("Gönüllü bulunamadı").build();
             if (Boolean.FALSE.equals(volunteer.getAvailabilityStatus()))
-            {
-                return AssignmentResult.builder()
-                        .success(false)
-                        .message("Seçilen gönüllü şu an müsait değil")
-                        .build();
-            }
+                return AssignmentResult.builder().success(false).message("Seçilen gönüllü şu an müsait değil").build();
         }
 
         Team team = null;
@@ -83,12 +68,7 @@ public class AidAssignmentServiceImpl implements IAidAssignmentService
         {
             team = teamRepository.findById(request.getTeamId()).orElse(null);
             if (team == null)
-            {
-                return AssignmentResult.builder()
-                        .success(false)
-                        .message("Ekip bulunamadı")
-                        .build();
-            }
+                return AssignmentResult.builder().success(false).message("Ekip bulunamadı").build();
         }
 
         AidAssignment assignment = AidAssignment.builder()
@@ -99,16 +79,20 @@ public class AidAssignmentServiceImpl implements IAidAssignmentService
                 .notes(request.getNotes())
                 .build();
 
-        AidAssignment savedAssignment = aidAssignmentRepository.save(assignment);
+        AidAssignment saved = aidAssignmentRepository.save(assignment);
 
         aidRequest.setStatus(AidRequest.RequestStatus.ASSIGNED);
         aidRequestRepository.save(aidRequest);
 
-        return AssignmentResult.builder()
-                .success(true)
-                .message("Görev başarıyla oluşturuldu")
-                .assignmentId(savedAssignment.getAssignmentId())
-                .build();
+        auditService.log(
+                currentUserEmail(),
+                "CREATE",
+                "ASSIGNMENT",
+                String.valueOf(saved.getAssignmentId()),
+                "Talep #" + request.getRequestId() + " için görev oluşturuldu"
+        );
+
+        return AssignmentResult.builder().success(true).message("Görev başarıyla oluşturuldu").assignmentId(saved.getAssignmentId()).build();
     }
 
     @Override
@@ -116,23 +100,13 @@ public class AidAssignmentServiceImpl implements IAidAssignmentService
     {
         AidAssignment assignment = aidAssignmentRepository.findById(request.getAssignmentId()).orElse(null);
         if (assignment == null)
-        {
-            return AssignmentResult.builder()
-                    .success(false)
-                    .message("Görev bulunamadi")
-                    .build();
-        }
+            return AssignmentResult.builder().success(false).message("Görev bulunamadi").build();
 
         if (request.getVolunteerId() != null)
         {
             Volunteer volunteer = volunteerRepository.findById(request.getVolunteerId()).orElse(null);
             if (volunteer == null)
-            {
-                return AssignmentResult.builder()
-                        .success(false)
-                        .message("Gönüllü bulunamadı")
-                        .build();
-            }
+                return AssignmentResult.builder().success(false).message("Gönüllü bulunamadı").build();
             assignment.setAssignedVolunteer(volunteer);
         }
 
@@ -140,12 +114,7 @@ public class AidAssignmentServiceImpl implements IAidAssignmentService
         {
             Team team = teamRepository.findById(request.getTeamId()).orElse(null);
             if (team == null)
-            {
-                return AssignmentResult.builder()
-                        .success(false)
-                        .message("Ekip bulunamadı")
-                        .build();
-            }
+                return AssignmentResult.builder().success(false).message("Ekip bulunamadı").build();
             assignment.setAssignedTeam(team);
         }
 
@@ -153,54 +122,54 @@ public class AidAssignmentServiceImpl implements IAidAssignmentService
         {
             assignment.setStatus(request.getStatus());
             if (request.getStatus() == AssignmentStatus.COMPLETED)
-            {
                 assignment.setCompletedAt(LocalDateTime.now());
-            }
         }
+
         if (request.getNotes() != null)
-        {
             assignment.setNotes(request.getNotes());
-        }
 
         aidAssignmentRepository.save(assignment);
 
-        return AssignmentResult.builder()
-                .success(true)
-                .message("Görev başarıyla güncellendi")
-                .build();
+        auditService.log(
+                currentUserEmail(),
+                "UPDATE",
+                "ASSIGNMENT",
+                String.valueOf(request.getAssignmentId()),
+                "Görev durumu: " + (request.getStatus() != null ? request.getStatus().name() : "güncellendi")
+        );
+
+        return AssignmentResult.builder().success(true).message("Görev başarıyla güncellendi").build();
     }
 
     @Override
     public AssignmentResult deleteAssignment(Integer assignmentId)
     {
         if (!aidAssignmentRepository.existsById(assignmentId))
-        {
-            return AssignmentResult.builder()
-                    .success(false)
-                    .message("Silinecek görev bulunamadı")
-                    .build();
-        }
+            return AssignmentResult.builder().success(false).message("Silinecek görev bulunamadı").build();
+
         aidAssignmentRepository.deleteById(assignmentId);
-        return AssignmentResult.builder()
-                .success(true)
-                .message("Görev başarıyla silindi")
-                .build();
+
+        auditService.log(
+                currentUserEmail(),
+                "DELETE",
+                "ASSIGNMENT",
+                String.valueOf(assignmentId),
+                "Görev silindi"
+        );
+
+        return AssignmentResult.builder().success(true).message("Görev başarıyla silindi").build();
     }
 
     @Override
     public List<AidAssignmentResponse> getAllAssignments()
     {
-        return aidAssignmentRepository.findAll()
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        return aidAssignmentRepository.findAll().stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     @Override
     public AidAssignmentResponse getAssignmentById(Integer assignmentId)
     {
-        AidAssignment assignment = aidAssignmentRepository.findById(assignmentId)
-                .orElse(null);
+        AidAssignment assignment = aidAssignmentRepository.findById(assignmentId).orElse(null);
         if (assignment == null) return null;
         return toResponse(assignment);
     }
@@ -208,19 +177,13 @@ public class AidAssignmentServiceImpl implements IAidAssignmentService
     @Override
     public List<AidAssignmentResponse> getAssignmentsByVolunteer(Integer volunteerId)
     {
-        return aidAssignmentRepository.findByAssignedVolunteer_VolunteerId(volunteerId)
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        return aidAssignmentRepository.findByAssignedVolunteer_VolunteerId(volunteerId).stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     @Override
     public List<AidAssignmentResponse> getAssignmentsByTeam(Integer teamId)
     {
-        return aidAssignmentRepository.findByAssignedTeam_TeamId(teamId)
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        return aidAssignmentRepository.findByAssignedTeam_TeamId(teamId).stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     private AidAssignmentResponse toResponse(AidAssignment a)
@@ -228,20 +191,13 @@ public class AidAssignmentServiceImpl implements IAidAssignmentService
         return AidAssignmentResponse.builder()
                 .assignmentId(a.getAssignmentId())
                 .requestId(a.getRequest() != null ? a.getRequest().getRequestId() : null)
-                .requestType(a.getRequest() != null && a.getRequest().getRequestType() != null
-                        ? a.getRequest().getRequestType().getTypeName() : null)
+                .requestType(a.getRequest() != null && a.getRequest().getRequestType() != null ? a.getRequest().getRequestType().getTypeName() : null)
                 .requestStatus(a.getRequest() != null ? a.getRequest().getStatus().name() : null)
-                .householdName(a.getRequest() != null && a.getRequest().getHousehold() != null
-                        ? a.getRequest().getHousehold().getHouseholdName() : null)
-                .volunteerId(a.getAssignedVolunteer() != null
-                        ? a.getAssignedVolunteer().getVolunteerId() : null)
-                .volunteerName(a.getAssignedVolunteer() != null
-                        ? a.getAssignedVolunteer().getUser().getName() + " " +
-                        a.getAssignedVolunteer().getUser().getSurname() : null)
-                .teamId(a.getAssignedTeam() != null
-                        ? a.getAssignedTeam().getTeamId() : null)
-                .teamName(a.getAssignedTeam() != null
-                        ? a.getAssignedTeam().getTeamName() : null)
+                .householdName(a.getRequest() != null && a.getRequest().getHousehold() != null ? a.getRequest().getHousehold().getHouseholdName() : null)
+                .volunteerId(a.getAssignedVolunteer() != null ? a.getAssignedVolunteer().getVolunteerId() : null)
+                .volunteerName(a.getAssignedVolunteer() != null ? a.getAssignedVolunteer().getUser().getName() + " " + a.getAssignedVolunteer().getUser().getSurname() : null)
+                .teamId(a.getAssignedTeam() != null ? a.getAssignedTeam().getTeamId() : null)
+                .teamName(a.getAssignedTeam() != null ? a.getAssignedTeam().getTeamName() : null)
                 .status(a.getStatus())
                 .assignedAt(a.getAssignedAt())
                 .completedAt(a.getCompletedAt())

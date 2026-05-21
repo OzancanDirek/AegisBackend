@@ -9,6 +9,9 @@ import org.example.Model.Warehouse;
 import org.example.Repository.InventoryRepository;
 import org.example.Repository.WarehouseRepository;
 import org.example.Service.IInventoryService;
+import org.example.Service.IAuditService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,6 +23,13 @@ public class InventoryServiceImpl implements IInventoryService
 {
     private final InventoryRepository inventoryRepository;
     private final WarehouseRepository warehouseRepository;
+    private final IAuditService auditService;
+
+    private String currentUserEmail()
+    {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null ? auth.getName() : "unknown";
+    }
 
     private InventoryItemResponseDto toDto(InventoryItem item)
     {
@@ -40,24 +50,33 @@ public class InventoryServiceImpl implements IInventoryService
                 .build();
     }
 
-
     @Override
-    public InventoryItemResponseDto createItem(CreateInventoryItemDto createInventoryItemDto)
+    public InventoryItemResponseDto createItem(CreateInventoryItemDto dto)
     {
-        Warehouse warehouse = warehouseRepository.findById(createInventoryItemDto.getWarehouseId())
+        Warehouse warehouse = warehouseRepository.findById(dto.getWarehouseId())
                 .orElseThrow(() -> new RuntimeException("Depo bulunamadı"));
 
         InventoryItem item = InventoryItem.builder()
                 .warehouse(warehouse)
-                .itemName(createInventoryItemDto.getItemName())
-                .category(createInventoryItemDto.getCategory())
-                .quantity(createInventoryItemDto.getQuantity())
-                .unit(createInventoryItemDto.getUnit())
-                .criticalThreshold(createInventoryItemDto.getCriticalThreshold())
-                .expiryDate(createInventoryItemDto.getExpiryDate())
+                .itemName(dto.getItemName())
+                .category(dto.getCategory())
+                .quantity(dto.getQuantity())
+                .unit(dto.getUnit())
+                .criticalThreshold(dto.getCriticalThreshold())
+                .expiryDate(dto.getExpiryDate())
                 .build();
 
-        return toDto(inventoryRepository.save(item));
+        InventoryItem saved = inventoryRepository.save(item);
+
+        auditService.log(
+                currentUserEmail(),
+                "CREATE",
+                "INVENTORY_ITEM",
+                String.valueOf(saved.getItemId()),
+                warehouse.getName() + " deposuna \"" + saved.getItemName() + "\" eklendi"
+        );
+
+        return toDto(saved);
     }
 
     @Override
@@ -73,12 +92,32 @@ public class InventoryServiceImpl implements IInventoryService
         if (dto.getCriticalThreshold() != null) item.setCriticalThreshold(dto.getCriticalThreshold());
         if (dto.getExpiryDate() != null) item.setExpiryDate(dto.getExpiryDate());
 
-        return toDto(inventoryRepository.save(item));
+        InventoryItem saved = inventoryRepository.save(item);
+
+        auditService.log(
+                currentUserEmail(),
+                "UPDATE",
+                "INVENTORY_ITEM",
+                String.valueOf(id),
+                "\"" + saved.getItemName() + "\" güncellendi — Miktar: " + saved.getQuantity() + " " + saved.getUnit()
+        );
+
+        return toDto(saved);
     }
 
     @Override
     public void deleteItem(Integer id)
     {
+        inventoryRepository.findById(id).ifPresent(item ->
+                auditService.log(
+                        currentUserEmail(),
+                        "DELETE",
+                        "INVENTORY_ITEM",
+                        String.valueOf(id),
+                        "\"" + item.getItemName() + "\" silindi"
+                )
+        );
+
         inventoryRepository.deleteById(id);
     }
 
@@ -86,16 +125,14 @@ public class InventoryServiceImpl implements IInventoryService
     public List<InventoryItemResponseDto> getAllItems()
     {
         return inventoryRepository.findAll().stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
+                .map(this::toDto).collect(Collectors.toList());
     }
 
     @Override
     public List<InventoryItemResponseDto> getItemsByWarehouse(Integer warehouseId)
     {
         return inventoryRepository.findByWarehouse_WarehouseId(warehouseId).stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
+                .map(this::toDto).collect(Collectors.toList());
     }
 
     @Override

@@ -14,6 +14,7 @@ import org.example.Repository.UserRepository;
 import org.example.Repository.VolunteerRepository;
 import org.example.Security.JwtUtil;
 import org.example.Service.IUserService;
+import org.example.Service.IAuditService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -33,6 +34,7 @@ public class UserServiceImpl implements IUserService
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
     private final VolunteerRepository volunteerRepository;
+    private final IAuditService auditService;
 
     @Override
     public Map<String, String> login(LoginDto loginDto)
@@ -44,16 +46,25 @@ public class UserServiceImpl implements IUserService
 
             if (!passwordEncoder.matches(loginDto.password, user.getPasswordHash()))
             {
+                auditService.log(loginDto.email, "LOGIN_FAILED", "AUTH", null, "Hatalı şifre ile giriş denemesi");
                 throw new RuntimeException("Şifre yanlış");
             }
 
             String role = user.getRoles().stream()
                     .findFirst()
-                    .map(r -> r.getRoleName())
+                    .map(Role::getRoleName)
                     .orElse("User");
 
             String accessToken = jwtUtil.generateAccessToken(user.getEmail(), role);
             String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
+
+            auditService.log(
+                    loginDto.email,
+                    "LOGIN",
+                    "AUTH",
+                    user.getUserId().toString(),
+                    user.getName() + " " + user.getSurname() + " sisteme giriş yaptı — Rol: " + role
+            );
 
             return Map.of(
                     "accessToken", accessToken,
@@ -77,9 +88,7 @@ public class UserServiceImpl implements IUserService
         try
         {
             if (userRepository.findByEmail(registerDto.getEmail()).isPresent())
-            {
                 throw new RuntimeException("Bu email zaten kayıtlı");
-            }
 
             Adresses address = new Adresses();
             address.setCity(registerDto.getAddress().city);
@@ -103,12 +112,43 @@ public class UserServiceImpl implements IUserService
             user.setRoles(new HashSet<>(List.of(defaultRole)));
             userRepository.save(user);
 
+            auditService.log(
+                    registerDto.getEmail(),
+                    "REGISTER",
+                    "AUTH",
+                    null,
+                    registerDto.getName() + " " + registerDto.getSurname() + " sisteme kayıt oldu"
+            );
+
             return Map.of("message", "Kayıt başarılı");
         }
         catch (Exception e)
         {
             return Map.of("message", "Bir hata oluştu: " + e.getMessage());
         }
+    }
+
+    @Override
+    public UserProfileResponse updateProfile(UUID userId, UpdateUserRequest request)
+    {
+        Users user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Kullanıcı bulunamadı"));
+
+        if (request.getName() != null) user.setName(request.getName());
+        if (request.getSurname() != null) user.setSurname(request.getSurname());
+        if (request.getPhone() != null) user.setPhone(request.getPhone());
+
+        userRepository.save(user);
+
+        auditService.log(
+                user.getEmail(),
+                "UPDATE",
+                "USER",
+                userId.toString(),
+                user.getName() + " " + user.getSurname() + " profil bilgilerini güncelledi"
+        );
+
+        return getProfile(userId);
     }
 
     public String getRoleByEmail(String email)
@@ -133,7 +173,7 @@ public class UserServiceImpl implements IUserService
                 .surname(user.getSurname())
                 .email(user.getEmail())
                 .phone(user.getPhone())
-                .role(user.getRoles().stream().findFirst().map(r -> r.getRoleName()).orElse("User"))
+                .role(user.getRoles().stream().findFirst().map(Role::getRoleName).orElse("User"))
                 .city(user.getAddress() != null ? user.getAddress().getCity() : null)
                 .district(user.getAddress() != null ? user.getAddress().getDistrict() : null)
                 .build();
@@ -151,20 +191,5 @@ public class UserServiceImpl implements IUserService
         });
 
         return response;
-    }
-
-    @Override
-    public UserProfileResponse updateProfile(UUID userId, UpdateUserRequest request)
-    {
-        Users user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Kullanıcı bulunamadı"));
-
-        if (request.getName() != null) user.setName(request.getName());
-        if (request.getSurname() != null) user.setSurname(request.getSurname());
-        if (request.getPhone() != null) user.setPhone(request.getPhone());
-
-        userRepository.save(user);
-
-        return getProfile(userId);
     }
 }

@@ -12,6 +12,9 @@ import org.example.Repository.RoleRepository;
 import org.example.Repository.UserRepository;
 import org.example.Repository.VolunteerRepository;
 import org.example.Service.IVolunteerService;
+import org.example.Service.IAuditService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.example.Repository.AddressRepository;
 
@@ -28,24 +31,30 @@ public class VolunteerServiceImpl implements IVolunteerService
     private final UserRepository userRepository;
     private final AddressRepository _adressesRepository;
     private final RoleRepository roleRepository;
+    private final IAuditService auditService;
+
+    private String currentUserEmail()
+    {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null ? auth.getName() : "unknown";
+    }
 
     private ResultVolunteerDto mapToDto(Volunteer volunteer)
     {
-        ResultVolunteerDto volunteerDto = new ResultVolunteerDto();
-
-        volunteerDto.setVolunteerId(volunteer.getVolunteerId());
+        ResultVolunteerDto dto = new ResultVolunteerDto();
+        dto.setVolunteerId(volunteer.getVolunteerId());
 
         if (volunteer.getUser() != null)
         {
-            volunteerDto.setUserId(volunteer.getUser().getUserId());
-            volunteerDto.setName(volunteer.getUser().getName());
-            volunteerDto.setSurname(volunteer.getUser().getSurname());
-            volunteerDto.setPhone(volunteer.getUser().getPhone());
+            dto.setUserId(volunteer.getUser().getUserId());
+            dto.setName(volunteer.getUser().getName());
+            dto.setSurname(volunteer.getUser().getSurname());
+            dto.setPhone(volunteer.getUser().getPhone());
         }
 
-        volunteerDto.setAvailabilityStatus(volunteer.getAvailabilityStatus());
-        volunteerDto.setTransportType(volunteer.getTransportType());
-        volunteerDto.setMaxDistanceKm(volunteer.getMaxDistanceKm());
+        dto.setAvailabilityStatus(volunteer.getAvailabilityStatus());
+        dto.setTransportType(volunteer.getTransportType());
+        dto.setMaxDistanceKm(volunteer.getMaxDistanceKm());
 
         Adresses address = volunteer.getAddress() != null
                 ? volunteer.getAddress()
@@ -53,58 +62,43 @@ public class VolunteerServiceImpl implements IVolunteerService
 
         if (address != null)
         {
-            volunteerDto.setCity(address.getCity());
-            volunteerDto.setDistrict(address.getDistrict());
-            volunteerDto.setNeighborhood(address.getNeighborhood());
+            dto.setCity(address.getCity());
+            dto.setDistrict(address.getDistrict());
+            dto.setNeighborhood(address.getNeighborhood());
         }
 
         if (volunteer.getSkills() != null)
-        {
-            volunteerDto.setSkills(
-                    volunteer.getSkills()
-                            .stream()
-                            .map(skill -> skill.getSkillName())
-                            .toList()
-            );
-        }
+            dto.setSkills(volunteer.getSkills().stream().map(Skill::getSkillName).toList());
 
-        return volunteerDto;
+        return dto;
     }
 
     @Override
-    public Volunteer createVolunteer(CreateVolunteerDto createVolunteerDto)
+    public Volunteer createVolunteer(CreateVolunteerDto dto)
     {
         Volunteer volunteer = Volunteer.builder()
-                .availabilityStatus(createVolunteerDto.getAvailabilityStatus() != null ? createVolunteerDto.getAvailabilityStatus() : true)
-                .transportType(createVolunteerDto.getTransportType())
-                .maxDistanceKm(createVolunteerDto.getMaxDistanceKm())
+                .availabilityStatus(dto.getAvailabilityStatus() != null ? dto.getAvailabilityStatus() : true)
+                .transportType(dto.getTransportType())
+                .maxDistanceKm(dto.getMaxDistanceKm())
                 .build();
 
-        if (createVolunteerDto.getUserId() != null)
+        if (dto.getUserId() != null)
         {
-            Users user = userRepository.findById(createVolunteerDto.getUserId()).orElse(null);
-            if (user != null)
-            {
-                volunteer.setUser(user);
-            }
+            Users user = userRepository.findById(dto.getUserId()).orElse(null);
+            if (user != null) volunteer.setUser(user);
         }
 
         Adresses address = null;
-
-        if (createVolunteerDto.getAddressId() != null)
-        {
-            address = _adressesRepository.getReferenceById(createVolunteerDto.getAddressId());
-        }
+        if (dto.getAddressId() != null)
+            address = _adressesRepository.getReferenceById(dto.getAddressId());
         else if (volunteer.getUser() != null && volunteer.getUser().getAddress() != null)
-        {
             address = volunteer.getUser().getAddress();
-        }
 
         volunteer.setAddress(address);
 
-        if (createVolunteerDto.getSkillIds() != null && !createVolunteerDto.getSkillIds().isEmpty())
+        if (dto.getSkillIds() != null && !dto.getSkillIds().isEmpty())
         {
-            Set<Skill> skills = createVolunteerDto.getSkillIds().stream()
+            Set<Skill> skills = dto.getSkillIds().stream()
                     .map(id -> {
                         Skill s = new Skill();
                         s.setSkillId(id);
@@ -125,24 +119,22 @@ public class VolunteerServiceImpl implements IVolunteerService
                 userRepository.save(user);
             }
         }
-        return volunteerRepository.save(volunteer);
-    }
 
-    @Override
-    public List<ResultVolunteerDto> getAllVolunteers()
-    {
-        return volunteerRepository.findAll().
-                stream()
-                .map(this::mapToDto)
-                .toList();
-    }
+        Volunteer saved = volunteerRepository.save(volunteer);
 
-    @Override
-    public ResultVolunteerDto getVolunteerById(Integer id)
-    {
-        return volunteerRepository.findByVolunteerId(id)
-                .map(this::mapToDto)
-                .orElse(null);
+        String userName = saved.getUser() != null
+                ? saved.getUser().getName() + " " + saved.getUser().getSurname()
+                : "Bilinmeyen";
+
+        auditService.log(
+                currentUserEmail(),
+                "CREATE",
+                "VOLUNTEER",
+                String.valueOf(saved.getVolunteerId()),
+                userName + " gönüllü olarak kaydedildi"
+        );
+
+        return saved;
     }
 
     @Override
@@ -151,7 +143,31 @@ public class VolunteerServiceImpl implements IVolunteerService
         volunteerRepository.findByVolunteerId(id).ifPresent(volunteer -> {
             volunteer.setAvailabilityStatus(status);
             volunteerRepository.save(volunteer);
+
+            String userName = volunteer.getUser() != null
+                    ? volunteer.getUser().getName() + " " + volunteer.getUser().getSurname()
+                    : "Bilinmeyen";
+
+            auditService.log(
+                    currentUserEmail(),
+                    "UPDATE",
+                    "VOLUNTEER",
+                    String.valueOf(id),
+                    userName + " müsaitlik durumu: " + (status ? "Müsait" : "Meşgul")
+            );
         });
+    }
+
+    @Override
+    public List<ResultVolunteerDto> getAllVolunteers()
+    {
+        return volunteerRepository.findAll().stream().map(this::mapToDto).toList();
+    }
+
+    @Override
+    public ResultVolunteerDto getVolunteerById(Integer id)
+    {
+        return volunteerRepository.findByVolunteerId(id).map(this::mapToDto).orElse(null);
     }
 
     @Override
@@ -159,26 +175,23 @@ public class VolunteerServiceImpl implements IVolunteerService
     {
         return volunteerRepository.findAll().stream()
                 .filter(Volunteer::getAvailabilityStatus)
-                .map(this::mapToDto)
-                .toList();
+                .map(this::mapToDto).toList();
     }
 
     @Override
-    public List<ResultVolunteerDto> findBySkill(String skillName)//yetenek adlarına göre listeleme çeşidi
+    public List<ResultVolunteerDto> findBySkill(String skillName)
     {
         return volunteerRepository.findAll().stream()
                 .filter(v -> v.getSkills() != null &&
-                        v.getSkills().stream()
-                                .anyMatch(skill -> skill.getSkillName().equalsIgnoreCase(skillName)))
-                .map(this::mapToDto)
-                .toList();
+                        v.getSkills().stream().anyMatch(s -> s.getSkillName().equalsIgnoreCase(skillName)))
+                .map(this::mapToDto).toList();
     }
 
     @Override
     public ResultVolunteerDto getVolunteerProfile(UUID userId)
     {
-        Volunteer volunteer = volunteerRepository.findByUser_UserId(userId).orElseThrow(() -> new RuntimeException("Volunteer not found"));
+        Volunteer volunteer = volunteerRepository.findByUser_UserId(userId)
+                .orElseThrow(() -> new RuntimeException("Volunteer not found"));
         return getVolunteerById(volunteer.getVolunteerId());
     }
-
 }

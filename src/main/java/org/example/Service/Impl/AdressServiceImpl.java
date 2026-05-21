@@ -7,6 +7,9 @@ import org.example.Model.Adresses;
 import org.example.Repository.AddressRepository;
 import org.example.Repository.ResidentRepository;
 import org.example.Service.IAdressService;
+import org.example.Service.IAuditService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,7 +20,13 @@ public class AdressServiceImpl implements IAdressService
 {
     public final AddressRepository addressRepository;
     public final ResidentRepository residentRepository;
+    private final IAuditService auditService;
 
+    private String currentUserEmail()
+    {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null ? auth.getName() : "unknown";
+    }
 
     @Override
     public List<Adresses> getAllAdress()
@@ -26,60 +35,79 @@ public class AdressServiceImpl implements IAdressService
     }
 
     @Override
-    public Adresses createAdress(CreateAdressDto createAdressDto)
+    public Adresses createAdress(CreateAdressDto dto)
     {
-        boolean exists = addressRepository
-                .existsByCityAndDistrictAndStreet(
-                        createAdressDto.getCity(),
-                        createAdressDto.getDistrict(),
-                        createAdressDto.getStreet()
-                );
+        boolean exists = addressRepository.existsByCityAndDistrictAndStreet(
+                dto.getCity(), dto.getDistrict(), dto.getStreet());
         if (exists)
-        {
-            throw new RuntimeException("zaten mevcut");
-        }
+            throw new RuntimeException("Adres zaten mevcut");
+
         Adresses adresses = new Adresses();
+        adresses.setCity(dto.getCity());
+        adresses.setDistrict(dto.getDistrict());
+        adresses.setNeighborhood(dto.getNeighborhood());
+        adresses.setStreet(dto.getStreet());
+        adresses.setBuildingNo(dto.getBuildingNo());
+        adresses.setApartmentNo(dto.getApartmentNo());
+        adresses.setLatitude(dto.getLatitude());
+        adresses.setLongitude(dto.getLongitude());
 
-        adresses.setCity(createAdressDto.getCity());
-        adresses.setDistrict(createAdressDto.getDistrict());
-        adresses.setNeighborhood(createAdressDto.getNeighborhood());
-        adresses.setStreet(createAdressDto.getStreet());
-        adresses.setBuildingNo(createAdressDto.getBuildingNo());
-        adresses.setApartmentNo(createAdressDto.getApartmentNo());
-        adresses.setLatitude(createAdressDto.getLatitude());
-        adresses.setLongitude(createAdressDto.getLongitude());
+        Adresses saved = addressRepository.save(adresses);
 
-        return addressRepository.save(adresses);
+        auditService.log(
+                currentUserEmail(),
+                "CREATE",
+                "ADDRESS",
+                String.valueOf(saved.getAddressId()),
+                saved.getCity() + " / " + saved.getDistrict() + " / " + saved.getNeighborhood()
+        );
 
+        return saved;
     }
 
     @Override
     public void deleteAdress(int adressId)
     {
         boolean used = residentRepository.existsByAddress_AddressId(adressId);
-
         if (used)
-        {
             throw new RuntimeException("Bu adres bir resident tarafından kullanılıyor");
-        }
+
+        auditService.log(
+                currentUserEmail(),
+                "DELETE",
+                "ADDRESS",
+                String.valueOf(adressId),
+                "Adres silindi"
+        );
 
         addressRepository.deleteById(adressId);
     }
 
     @Override
-    public Adresses updateAdress(int adressId, UpdateAdressDto updateAdressDto)
+    public Adresses updateAdress(int adressId, UpdateAdressDto dto)
     {
         Adresses adresses = addressRepository.findById(adressId)
                 .orElseThrow(() -> new RuntimeException("Bu adres bulunamadı"));
 
-        adresses.setCity(updateAdressDto.getCity());
-        adresses.setDistrict(updateAdressDto.getDistrict());
-        adresses.setNeighborhood(updateAdressDto.getNeighborhood());
-        adresses.setStreet(updateAdressDto.getStreet());
-        adresses.setBuildingNo(updateAdressDto.getBuildingNo());
-        adresses.setApartmentNo(updateAdressDto.getApartmentNo());
-        adresses.setLatitude(updateAdressDto.getLatitude());
-        adresses.setLongitude(updateAdressDto.getLongitude());
-        return addressRepository.save(adresses);
+        adresses.setCity(dto.getCity());
+        adresses.setDistrict(dto.getDistrict());
+        adresses.setNeighborhood(dto.getNeighborhood());
+        adresses.setStreet(dto.getStreet());
+        adresses.setBuildingNo(dto.getBuildingNo());
+        adresses.setApartmentNo(dto.getApartmentNo());
+        adresses.setLatitude(dto.getLatitude());
+        adresses.setLongitude(dto.getLongitude());
+
+        Adresses saved = addressRepository.save(adresses);
+
+        auditService.log(
+                currentUserEmail(),
+                "UPDATE",
+                "ADDRESS",
+                String.valueOf(adressId),
+                saved.getCity() + " / " + saved.getDistrict() + " / " + saved.getNeighborhood()
+        );
+
+        return saved;
     }
 }

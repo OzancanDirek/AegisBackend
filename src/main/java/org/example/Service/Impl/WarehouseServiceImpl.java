@@ -11,6 +11,9 @@ import org.example.Repository.AddressRepository;
 import org.example.Repository.UserRepository;
 import org.example.Repository.WarehouseRepository;
 import org.example.Service.IWarehouseService;
+import org.example.Service.IAuditService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,19 +26,25 @@ public class WarehouseServiceImpl implements IWarehouseService
     private final WarehouseRepository warehouseRepository;
     private final UserRepository userRepository;
     private final AddressRepository addressRepository;
+    private final IAuditService auditService;
+
+    private String currentUserEmail()
+    {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null ? auth.getName() : "unknown";
+    }
 
     @Override
     public ResultWarehouseDto createWarehouse(CreateWarehouseDto dto)
     {
-        Users manager = userRepository.findById(dto.getManagerId())
-                .orElseThrow(() -> new RuntimeException("Manager bulunamadı"));
+        Users manager = null;
+        if (dto.getManagerId() != null)
+            manager = userRepository.findById(dto.getManagerId()).orElse(null);
 
         Adresses address = null;
-
         if (dto.getAddressId() != null)
         {
-            address = addressRepository.findById(dto.getAddressId())
-                    .orElseThrow(() -> new RuntimeException("Address bulunamadı"));
+            address = addressRepository.findById(dto.getAddressId()).orElse(null);
         }
         else if (dto.getCity() != null)
         {
@@ -57,18 +66,24 @@ public class WarehouseServiceImpl implements IWarehouseService
                 .address(address)
                 .build();
 
-        warehouseRepository.save(warehouse);
+        Warehouse saved = warehouseRepository.save(warehouse);
 
-        return mapToDto(warehouse);
+        auditService.log(
+                currentUserEmail(),
+                "CREATE",
+                "WAREHOUSE",
+                String.valueOf(saved.getWarehouseId()),
+                "\"" + saved.getName() + "\" deposu oluşturuldu" +
+                        (address != null ? " — " + address.getCity() + "/" + address.getDistrict() : "")
+        );
+
+        return mapToDto(saved);
     }
 
     @Override
     public List<ResultWarehouseDto> getAll()
     {
-        return warehouseRepository.findAll()
-                .stream()
-                .map(this::mapToDto)
-                .toList();
+        return warehouseRepository.findAll().stream().map(this::mapToDto).toList();
     }
 
     @Override
@@ -76,6 +91,14 @@ public class WarehouseServiceImpl implements IWarehouseService
     {
         Warehouse warehouse = warehouseRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Warehouse bulunamadı"));
+
+        auditService.log(
+                currentUserEmail(),
+                "DELETE",
+                "WAREHOUSE",
+                String.valueOf(id),
+                "\"" + warehouse.getName() + "\" deposu silindi"
+        );
 
         warehouseRepository.delete(warehouse);
     }
@@ -96,6 +119,15 @@ public class WarehouseServiceImpl implements IWarehouseService
         updateAddress(warehouse, dto);
 
         warehouseRepository.save(warehouse);
+
+        auditService.log(
+                currentUserEmail(),
+                "UPDATE",
+                "WAREHOUSE",
+                String.valueOf(id),
+                "\"" + warehouse.getName() + "\" deposu güncellendi — Durum: " + warehouse.getStatus()
+        );
+
         return mapToDto(warehouse);
     }
 
@@ -120,24 +152,20 @@ public class WarehouseServiceImpl implements IWarehouseService
         warehouse.setAddress(addressRepository.save(address));
     }
 
-
     private ResultWarehouseDto mapToDto(Warehouse warehouse)
     {
         ResultWarehouseDto dto = new ResultWarehouseDto();
-
         dto.setWarehouseId(warehouse.getWarehouseId());
         dto.setName(warehouse.getName());
         dto.setStatus(warehouse.getStatus());
         dto.setCapacityM3(warehouse.getCapacityM3());
 
-        // Manager bilgisi
         if (warehouse.getManager() != null)
         {
             dto.setManagerId(warehouse.getManager().getUserId());
             dto.setManagerName(warehouse.getManager().getName());
         }
 
-        // Address bilgisi
         if (warehouse.getAddress() != null)
         {
             dto.setAddressId(warehouse.getAddress().getAddressId());
