@@ -2,6 +2,7 @@ package org.example.Service.Impl;
 
 import lombok.RequiredArgsConstructor;
 import org.example.Dtos.LoginDto;
+import org.example.Dtos.LoginResponseDto;
 import org.example.Dtos.RegisterDto;
 import org.example.Dtos.UserDto.UpdateUserRequest;
 import org.example.Dtos.UserDto.UserProfileResponse;
@@ -37,7 +38,7 @@ public class UserServiceImpl implements IUserService
     private final IAuditService auditService;
 
     @Override
-    public Map<String, String> login(LoginDto loginDto)
+    public LoginResponseDto login(LoginDto loginDto)
     {
         try
         {
@@ -47,7 +48,7 @@ public class UserServiceImpl implements IUserService
             if (!passwordEncoder.matches(loginDto.password, user.getPasswordHash()))
             {
                 auditService.log(loginDto.email, "LOGIN_FAILED", "AUTH", null, "Hatalı şifre ile giriş denemesi");
-                throw new RuntimeException("Şifre yanlış");
+                return LoginResponseDto.builder().message("Şifre yanlış").build();
             }
 
             String role = user.getRoles().stream()
@@ -59,26 +60,24 @@ public class UserServiceImpl implements IUserService
             String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
 
             auditService.log(
-                    loginDto.email,
-                    "LOGIN",
-                    "AUTH",
+                    loginDto.email, "LOGIN", "AUTH",
                     user.getUserId().toString(),
                     user.getName() + " " + user.getSurname() + " sisteme giriş yaptı — Rol: " + role
             );
 
-            return Map.of(
-                    "accessToken", accessToken,
-                    "refreshToken", refreshToken,
-                    "role", role,
-                    "email", user.getEmail(),
-                    "name", user.getName() != null ? user.getName() : "",
-                    "userId", user.getUserId().toString(),
-                    "addressId", user.getAddress() != null ? user.getAddress().getAddressId().toString() : ""
-            );
+            return LoginResponseDto.builder()
+                    .accessToken(accessToken)
+                    .refreshToken(refreshToken)
+                    .role(role)
+                    .email(user.getEmail())
+                    .name(user.getName() != null ? user.getName() : "")
+                    .userId(user.getUserId().toString())
+                    .addressId(user.getAddress() != null ? user.getAddress().getAddressId().toString() : "")
+                    .build();
         }
         catch (Exception e)
         {
-            return Map.of("message", "Bir hata oluştu: " + e.getMessage());
+            return LoginResponseDto.builder().message("Bir hata oluştu").build();
         }
     }
 

@@ -2,8 +2,8 @@ package org.example.Controller;
 
 import lombok.RequiredArgsConstructor;
 import org.example.Dtos.AdressDto.CreateAdressDto;
+import org.example.Dtos.AdressDto.ResultAdressDto;
 import org.example.Dtos.AdressDto.UpdateAdressDto;
-import org.example.Model.Adresses;
 import org.example.Service.IAdressService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -27,13 +27,13 @@ public class AdressController
     private final IAdressService adressService;
 
     @GetMapping("allAdresses")
-    public List<Adresses> getAllAdresses()
+    public List<ResultAdressDto> getAllAdresses()
     {
         return adressService.getAllAdress();
     }
 
     @PostMapping
-    public ResponseEntity<Adresses> createAddress(@RequestBody CreateAdressDto createAdressDto)
+    public ResponseEntity<ResultAdressDto> createAddress(@RequestBody CreateAdressDto createAdressDto)
     {
         return ResponseEntity.ok(adressService.createAdress(createAdressDto));
     }
@@ -42,11 +42,11 @@ public class AdressController
     public ResponseEntity<String> deleteAdress(@PathVariable int id)
     {
         adressService.deleteAdress(id);
-        return ResponseEntity.ok("Adress basariyla silindi");
+        return ResponseEntity.ok("Adres başarıyla silindi");
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Adresses> updateAddress( @PathVariable int id,@RequestBody UpdateAdressDto updateAdressDto)
+    public ResponseEntity<ResultAdressDto> updateAddress(@PathVariable int id, @RequestBody UpdateAdressDto updateAdressDto)
     {
         return ResponseEntity.ok(adressService.updateAdress(id, updateAdressDto));
     }

@@ -29,7 +29,7 @@ public class VolunteerServiceImpl implements IVolunteerService
 {
     private final VolunteerRepository volunteerRepository;
     private final UserRepository userRepository;
-    private final AddressRepository _adressesRepository;
+    private final AddressRepository adressesRepository;
     private final RoleRepository roleRepository;
     private final IAuditService auditService;
 
@@ -90,7 +90,7 @@ public class VolunteerServiceImpl implements IVolunteerService
 
         Adresses address = null;
         if (dto.getAddressId() != null)
-            address = _adressesRepository.getReferenceById(dto.getAddressId());
+            address = adressesRepository.getReferenceById(dto.getAddressId());
         else if (volunteer.getUser() != null && volunteer.getUser().getAddress() != null)
             address = volunteer.getUser().getAddress();
 

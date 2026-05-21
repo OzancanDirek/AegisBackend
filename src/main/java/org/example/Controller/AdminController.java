@@ -1,7 +1,7 @@
 package org.example.Controller;
 
 import lombok.RequiredArgsConstructor;
-import org.example.Model.Users;
+import org.example.Dtos.UserDto.UserResponseDto;
 import org.example.Service.IAdminService;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,7 +21,7 @@ public class AdminController
     private final IAdminService adminservice;
 
     @GetMapping("/adminUserList")
-    public List<Users> adminUserList(@RequestParam String email)
+    public List<UserResponseDto> adminUserList(@RequestParam String email)
     {
         return adminservice.adminUserList(email);
     }

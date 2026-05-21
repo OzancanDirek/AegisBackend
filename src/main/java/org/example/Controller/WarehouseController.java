@@ -1,10 +1,10 @@
 package org.example.Controller;
 
 import lombok.RequiredArgsConstructor;
+import org.example.Dtos.UserDto.UserResponseDto;
 import org.example.Dtos.WarehouseDto.CreateWarehouseDto;
 import org.example.Dtos.WarehouseDto.ResultWarehouseDto;
 import org.example.Dtos.WarehouseDto.UpdateWarehouseDto;
-import org.example.Model.Users;
 import org.example.Service.IWarehouseService;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -51,7 +51,7 @@ public class WarehouseController
     }
 
     @GetMapping("/warehouse-managers")
-    public List<Users> getWarehouseManagers()
+    public List<UserResponseDto> getWarehouseManagers()
     {
         return warehouseService.getWarehouseManagers();
     }

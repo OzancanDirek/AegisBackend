@@ -2,6 +2,7 @@ package org.example.Service.Impl;
 
 import lombok.RequiredArgsConstructor;
 import org.example.Dtos.AdressDto.CreateAdressDto;
+import org.example.Dtos.AdressDto.ResultAdressDto;
 import org.example.Dtos.AdressDto.UpdateAdressDto;
 import org.example.Model.Adresses;
 import org.example.Repository.AddressRepository;
@@ -28,14 +29,32 @@ public class AdressServiceImpl implements IAdressService
         return auth != null ? auth.getName() : "unknown";
     }
 
-    @Override
-    public List<Adresses> getAllAdress()
+    private ResultAdressDto mapToDto(Adresses a)
     {
-        return addressRepository.findAll();
+        ResultAdressDto dto = new ResultAdressDto();
+        dto.addressId = a.getAddressId();
+        dto.city = a.getCity();
+        dto.district = a.getDistrict();
+        dto.neighborhood = a.getNeighborhood();
+        dto.street = a.getStreet();
+        dto.buildingNo = a.getBuildingNo();
+        dto.apartmentNo = a.getApartmentNo();
+        dto.latitude = a.getLatitude();
+        dto.longitude = a.getLongitude();
+        return dto;
     }
 
     @Override
-    public Adresses createAdress(CreateAdressDto dto)
+    public List<ResultAdressDto> getAllAdress()
+    {
+        return addressRepository.findAll()
+                .stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    @Override
+    public ResultAdressDto createAdress(CreateAdressDto dto)
     {
         boolean exists = addressRepository.existsByCityAndDistrictAndStreet(
                 dto.getCity(), dto.getDistrict(), dto.getStreet());
@@ -55,14 +74,12 @@ public class AdressServiceImpl implements IAdressService
         Adresses saved = addressRepository.save(adresses);
 
         auditService.log(
-                currentUserEmail(),
-                "CREATE",
-                "ADDRESS",
+                currentUserEmail(), "CREATE", "ADDRESS",
                 String.valueOf(saved.getAddressId()),
                 saved.getCity() + " / " + saved.getDistrict() + " / " + saved.getNeighborhood()
         );
 
-        return saved;
+        return mapToDto(saved);
     }
 
     @Override
@@ -72,19 +89,13 @@ public class AdressServiceImpl implements IAdressService
         if (used)
             throw new RuntimeException("Bu adres bir resident tarafından kullanılıyor");
 
-        auditService.log(
-                currentUserEmail(),
-                "DELETE",
-                "ADDRESS",
-                String.valueOf(adressId),
-                "Adres silindi"
-        );
+        auditService.log(currentUserEmail(), "DELETE", "ADDRESS", String.valueOf(adressId), "Adres silindi");
 
         addressRepository.deleteById(adressId);
     }
 
     @Override
-    public Adresses updateAdress(int adressId, UpdateAdressDto dto)
+    public ResultAdressDto updateAdress(int adressId, UpdateAdressDto dto)
     {
         Adresses adresses = addressRepository.findById(adressId)
                 .orElseThrow(() -> new RuntimeException("Bu adres bulunamadı"));
@@ -101,13 +112,11 @@ public class AdressServiceImpl implements IAdressService
         Adresses saved = addressRepository.save(adresses);
 
         auditService.log(
-                currentUserEmail(),
-                "UPDATE",
-                "ADDRESS",
+                currentUserEmail(), "UPDATE", "ADDRESS",
                 String.valueOf(adressId),
                 saved.getCity() + " / " + saved.getDistrict() + " / " + saved.getNeighborhood()
         );
 
-        return saved;
+        return mapToDto(saved);
     }
 }

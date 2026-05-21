@@ -2,6 +2,7 @@ package org.example.Controller;
 
 import lombok.RequiredArgsConstructor;
 import org.example.Dtos.LoginDto;
+import org.example.Dtos.LoginResponseDto;
 import org.example.Security.JwtUtil;
 import org.example.Service.IUserService;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +20,7 @@ public class LoginController
     private final JwtUtil jwtUtil;
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> login(@RequestBody LoginDto loginDto)
+    public ResponseEntity<LoginResponseDto> login(@RequestBody LoginDto loginDto)
     {
         return ResponseEntity.ok(userService.login(loginDto));
     }

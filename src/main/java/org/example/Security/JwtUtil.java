@@ -2,6 +2,7 @@ package org.example.Security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
@@ -10,15 +11,15 @@ import java.util.Date;
 @Component
 public class JwtUtil
 {
-    //Not normal tokenı 15 dakika verdim yenilenecek token ise 7 tgun boyunca sistemde tutacak kullanıcıyı
+    @Value("${jwt.secret}")
+    private String secret;
 
-    private static final String SECRET = "aegis-super-secret-key-must-be-32chars!";
-    private static final long ACCESS_TOKEN_EXPIRY  = 1000 * 60 * 60;      // 1 saat
-    private static final long REFRESH_TOKEN_EXPIRY = 1000 * 60 * 60 * 24 * 7; // 7 gün
+    private static final long ACCESS_TOKEN_EXPIRY = 1000 * 60 * 60;
+    private static final long REFRESH_TOKEN_EXPIRY = 1000 * 60 * 60 * 24 * 7;
 
     private Key getKey()
     {
-        return Keys.hmacShaKeyFor(SECRET.getBytes());
+        return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
     public String generateAccessToken(String email, String role)

@@ -1,6 +1,7 @@
 package org.example.Service;
 
 import org.example.Dtos.LoginDto;
+import org.example.Dtos.LoginResponseDto;
 import org.example.Dtos.RegisterDto;
 import org.example.Dtos.UserDto.UpdateUserRequest;
 import org.example.Dtos.UserDto.UserProfileResponse;
@@ -12,7 +13,7 @@ import java.util.UUID;
 
 public interface IUserService
 {
-    Map<String, String> login(LoginDto dto);
+    LoginResponseDto login(LoginDto loginDto);
 
     Map<String, String> register(RegisterDto registerDto);
 

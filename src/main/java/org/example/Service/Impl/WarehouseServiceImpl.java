@@ -1,6 +1,7 @@
 package org.example.Service.Impl;
 
 import lombok.RequiredArgsConstructor;
+import org.example.Dtos.UserDto.UserResponseDto;
 import org.example.Dtos.WarehouseDto.CreateWarehouseDto;
 import org.example.Dtos.WarehouseDto.ResultWarehouseDto;
 import org.example.Dtos.WarehouseDto.UpdateWarehouseDto;
@@ -184,8 +185,16 @@ public class WarehouseServiceImpl implements IWarehouseService
         return dto;
     }
 
-    public List<Users> getWarehouseManagers()
+    public List<UserResponseDto> getWarehouseManagers()
     {
-        return userRepository.findByRoleNameWareHouseManager("WAREHOUSE_MANAGER");
+        return userRepository.findByRoleNameWareHouseManager("WAREHOUSE_MANAGER")
+                .stream()
+                .map(u -> UserResponseDto.builder()
+                        .userId(u.getUserId())
+                        .name(u.getName())
+                        .surname(u.getSurname())
+                        .email(u.getEmail())
+                        .build())
+                .toList();
     }
 }

@@ -25,27 +25,27 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class VolunteerController
 {
-    private final IVolunteerService _volunteerService;
+    private final IVolunteerService volunteerService;
 
     @PostMapping
     public ResponseEntity<ResultVolunteerDto> createVolunteer(@RequestBody CreateVolunteerDto dto)
     {
-        Volunteer saved = _volunteerService.createVolunteer(dto);
-        ResultVolunteerDto resultDto = _volunteerService.getVolunteerById(saved.getVolunteerId());
+        Volunteer saved = volunteerService.createVolunteer(dto);
+        ResultVolunteerDto resultDto = volunteerService.getVolunteerById(saved.getVolunteerId());
         return ResponseEntity.ok(resultDto);
     }
 
     @GetMapping
     public ResponseEntity<List<ResultVolunteerDto>> getVolunteer()
     {
-        List<ResultVolunteerDto> allVolunteers = _volunteerService.getAllVolunteers();
+        List<ResultVolunteerDto> allVolunteers = volunteerService.getAllVolunteers();
         return ResponseEntity.ok(allVolunteers);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ResultVolunteerDto> getVolunteerById(@PathVariable Integer id)
     {
-        ResultVolunteerDto resultDto = _volunteerService.getVolunteerById(id);
+        ResultVolunteerDto resultDto = volunteerService.getVolunteerById(id);
         return ResponseEntity.ok(resultDto);
     }
 
@@ -53,21 +53,21 @@ public class VolunteerController
     public ResponseEntity<Void> updateAvailability(@PathVariable Integer id,
                                                    @RequestParam Boolean status)
     {
-        _volunteerService.updateAvailability(id, status);
+        volunteerService.updateAvailability(id, status);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/available")
     public ResponseEntity<List<ResultVolunteerDto>> findAvailableVolunteers()
     {
-        List<ResultVolunteerDto> volunteers = _volunteerService.findAvailableVolunteers();
+        List<ResultVolunteerDto> volunteers = volunteerService.findAvailableVolunteers();
         return ResponseEntity.ok(volunteers);
     }
 
     @GetMapping("/skill")
     public ResponseEntity<List<ResultVolunteerDto>> findBySkill(@RequestParam String skillName)
     {
-        List<ResultVolunteerDto> volunteers = _volunteerService.findBySkill(skillName);
+        List<ResultVolunteerDto> volunteers = volunteerService.findBySkill(skillName);
         return ResponseEntity.ok(volunteers);
     }
 }
