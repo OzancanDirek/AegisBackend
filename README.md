@@ -139,6 +139,7 @@ The application will start at `http://localhost:8080`.
 
 ## Project Structure
 
+```
 src/main/java/org/example/
 ├── Controller/       # REST controllers
 ├── Service/          # Business logic
@@ -148,3 +149,4 @@ src/main/java/org/example/
 ├── Dtos/             # Data Transfer Objects
 ├── Security/         # JWT and Spring Security configuration
 └── Scheduled/        # Scheduled jobs
+```
