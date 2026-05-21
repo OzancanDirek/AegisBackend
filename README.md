@@ -1,218 +1,150 @@
 # Aegis Backend
 
-> **Post-Disaster Neighborhood Solidarity and Resource Management System** — Java Spring Boot + MySQL REST API
-
-Frontend repository: [AegisFrontend](https://github.com/OzancanDirek/AegisFrontend)
-
----
+Spring Boot-based disaster management system backend. Developed for post-earthquake relief coordination.
 
 ## Tech Stack
 
-| | |
-|---|---|
-| Language | Java 17+ |
-| Framework | Spring Boot |
-| Database | MySQL 8 |
-| ORM | Spring Data JPA / Hibernate |
-| Build | Maven |
-| Architecture | Layered (Controller → Service → Repository) |
+- Java 21
+- Spring Boot 3.4.1
+- Spring Security + JWT
+- MySQL 9.4
+- Hibernate / JPA
+- Lombok
+- Maven
 
----
+## Prerequisites
+
+- Java 21+
+- MySQL 8+
+- Maven 3.8+
 
 ## Getting Started
 
-### Prerequisites
-- Java 17+
-- Maven
-- MySQL 8+
-
-### Steps
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/OzancanDirek/AegisBackend.git
 cd AegisBackend
 ```
 
-Create `src/main/resources/application.properties`:
+### 2. Create the database
 
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/mainAegis_db
-spring.datasource.username=root
-spring.datasource.password=YOUR_PASSWORD
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
-spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
-```
-
-Create the database:
+Run the following command in MySQL:
 
 ```sql
-CREATE DATABASE IF NOT EXISTS mainAegis_db;
+CREATE DATABASE mainAegis_db;
 ```
 
-Run the application:
+### 3. Configure `application.properties`
+
+Edit `src/main/resources/application.properties`:
+
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/mainAegis_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+spring.datasource.username=${DB_USERNAME:root}
+spring.datasource.password=${DB_PASSWORD:your_password}
+
+spring.jpa.hibernate.ddl-auto=update
+
+jwt.secret=${JWT_SECRET:aegis-super-secret-key-must-be-32chars!}
+```
+
+### 4. Run the application
 
 ```bash
 mvn spring-boot:run
 ```
 
-API will be available at `http://localhost:8080`.
+The application will start at `http://localhost:8080`.
 
----
+## Environment Variables
 
-## Project Structure
-
-```
-src/main/java/org/example/
-├── Controller/
-│   ├── AdminController.java
-│   ├── AdressController.java
-│   ├── LoginController.java
-│   ├── ResidentController.java
-│   ├── SkillController.java
-│   ├── SpecialNeedsController.java
-│   ├── TestController.java
-│   ├── UserRoleController.java
-│   └── VolunteerController.java
-│
-├── Service/
-│   ├── IAdminService.java
-│   ├── IAdressService.java
-│   ├── IResidentService.java
-│   ├── ISkillService.java
-│   ├── ISpecialNeedService.java
-│   ├── IUserRoleService.java
-│   ├── IVolunteerService.java
-│   └── Impl/
-│       ├── AdminServiceImpl.java
-│       ├── AdressServiceImpl.java
-│       ├── ResidentServiceImpl.java
-│       ├── SkillServiceImpl.java
-│       ├── SpecialNeedServiceImpl.java
-│       ├── UserRoleServiceImpl.java
-│       ├── UserServiceImpl.java
-│       └── VolunteerServiceImpl.java
-│
-├── Repository/
-│   ├── AddressRepository.java
-│   ├── ResidentRepository.java
-│   ├── RoleRepository.java
-│   ├── SkillRepository.java
-│   ├── SpecialNeedRepository.java
-│   ├── UserRepository.java
-│   └── VolunteerRepository.java
-│
-├── Model/
-│   ├── Adresses.java
-│   ├── HouseHold.java
-│   ├── Resident.java
-│   ├── Roles.java
-│   ├── Skills.java
-│   ├── SpecialNeeds.java
-│   ├── UserRoles.java
-│   ├── Users.java
-│   └── Volunteers.java
-│
-├── Dtos/
-│   ├── AdressDto/
-│   │   ├── CreateAdressDto.java
-│   │   ├── ResultAdressDto.java
-│   │   └── UpdateAdressDto.java
-│   ├── ResidentDto/
-│   │   └── ResidentResponseDto.java
-│   ├── SkillDtos/
-│   ├── SpecialNeedsDto/
-│   │   ├── CreateSpecialNeeds.java
-│   │   └── SpecialNeedsResponseDto.java
-│   ├── VolunteerDtos/
-│   ├── LoginDto.java
-│   └── RegisterDto.java
-│
-└── Main.java
-```
-
----
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DB_USERNAME` | MySQL username | `root` |
+| `DB_PASSWORD` | MySQL password | — |
+| `JWT_SECRET` | JWT signing key (min. 32 characters) | — |
 
 ## API Endpoints
 
-### Address
-```
-GET    /api/addresses/allAdresses       List all addresses
-POST   /api/addresses                   Create new address
-PUT    /api/addresses/{id}              Update address
-DELETE /api/addresses/{id}              Delete address
-```
+### Authentication
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/login` | Login |
+| POST | `/api/auth/register` | Register |
 
-### User & Role
-```
-GET    /api/UserRole/users              List all users
-GET    /api/UserRole/all                List all roles
-GET    /api/UserRole/user/{userId}      Get roles of a user
-POST   /api/UserRole/assign             Assign role to user
-```
+### Users
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/users/profile` | Get profile | Authenticated |
+| PUT | `/api/users/profile` | Update profile | Authenticated |
 
-### Resident
-```
-GET    /api/residents/all                       List all residents
-POST   /api/residents/{id}/special-needs        Assign special needs to resident
-```
+### Aid Requests
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/aid-requests` | Get all requests | Authenticated |
+| POST | `/api/aid-requests` | Create request | Authenticated |
+| PUT | `/api/aid-requests` | Update request | Authenticated |
+| DELETE | `/api/aid-requests/{id}` | Delete request | Authenticated |
 
-### Special Needs
-```
-GET    /api/special-needs/all           List all special need definitions
-POST   /api/special-needs               Create new special need
-```
+### Assignments
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/assignments` | Get all assignments | Admin, Calisan |
+| POST | `/api/assignments` | Create assignment | Admin, Calisan |
+| PUT | `/api/assignments` | Update assignment | Admin, Calisan |
+| DELETE | `/api/assignments/{id}` | Delete assignment | Admin, Calisan |
 
-### Volunteer
-```
-GET    /api/volunteers/all              List all volunteers
-POST   /api/volunteers                  Create volunteer
-```
+### Warehouses
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/warehouse/getAllWarehouse` | Get all warehouses | Authenticated |
+| POST | `/api/warehouse` | Create warehouse | Authenticated |
+| PUT | `/api/warehouse/{id}` | Update warehouse | Authenticated |
+| DELETE | `/api/warehouse/{id}` | Delete warehouse | Authenticated |
 
-### Skill
-```
-GET    /api/skills/all                  List all skills
-POST   /api/skills                      Create new skill
-```
+### Inventory
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/inventory/warehouse/{id}` | Get warehouse inventory | Authenticated |
+| GET | `/api/inventory/critical` | Get critical items | Authenticated |
+| POST | `/api/inventory` | Add item | Authenticated |
+| PUT | `/api/inventory/{id}` | Update item | Authenticated |
+| DELETE | `/api/inventory/{id}` | Delete item | Authenticated |
 
----
+### Audit Log
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/audit` | Get all logs | Admin |
+| GET | `/api/audit/user/{email}` | Get logs by user | Admin |
+| GET | `/api/audit/action/{action}` | Get logs by action | Admin |
 
-## Database Schema
-
-20 tables — key relationships:
-
-```
-users ──< user_roles >── roles                           many-to-many
-households ──< residents                                 one-to-many
-residents ──< resident_special_needs >── special_needs   many-to-many
-volunteers ──< volunteer_skills >── skills               many-to-many
-households ──< aid_requests                              one-to-many
-aid_requests ──< aid_assignments                         one-to-many
-warehouses ──< inventory_items                           one-to-many
-addresses ──── buildings                                 one-to-one
-```
-
----
-
-## User Roles
+## Roles
 
 | Role | Description |
-|---|---|
-| `Admin` | System administrator with full access |
-| `Gonullu` | Field volunteer |
-| `Calisan` | Staff member |
-| `Depremzede` | Aid recipient / disaster victim |
+|------|-------------|
+| `Admin` | Full access |
+| `Calisan` | Operational access |
+| `Gonullu` | Volunteer — view assignments |
+| `Depremzede` | Earthquake victim — submit aid requests |
+| `WAREHOUSE_MANAGER` | Warehouse management |
+| `User` | Basic access |
 
----
+## Security
 
-## Technical Notes
+- JWT-based authentication (Access Token: 1 hour, Refresh Token: 7 days)
+- Role-based access control (RBAC)
+- BCrypt password hashing
+- Audit logging — all critical operations are recorded
 
-- User IDs use `CHAR(36)` UUID format
-- Lombok annotations used throughout: `@Getter`, `@Setter`, `@Builder`, `@NoArgsConstructor`, `@AllArgsConstructor`
-- DTO layer prevents JSON serialization issues caused by lazy-loaded JPA relationships
-- `@Transactional` applied where lazy field access is required
-- CORS configured for `http://localhost:5173` on all controllers
+## Project Structure
 
----
-
-*Aegis Disaster Management System · v1.0.0 · 2026*
+src/main/java/org/example/
+├── Controller/       # REST controllers
+├── Service/          # Business logic
+│   └── Impl/         # Service implementations
+├── Repository/       # JPA repositories
+├── Model/            # Entity classes
+├── Dtos/             # Data Transfer Objects
+├── Security/         # JWT and Spring Security configuration
+└── Scheduled/        # Scheduled jobs
