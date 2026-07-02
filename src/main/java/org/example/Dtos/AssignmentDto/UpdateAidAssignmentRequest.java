@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import org.example.Model.enums.AssignmentStatus;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -24,4 +25,6 @@ public class UpdateAidAssignmentRequest
     private AssignmentStatus status;
 
     private String notes;
+
+    private LocalDateTime deadline;
 }

@@ -145,6 +145,7 @@ public class AidRequestServiceImpl implements IAidRequestService
                 .orElseGet(() -> {
                     Users user = userRepository.findById(userId)
                             .orElseThrow(() -> new RuntimeException("Kullanıcı bulunamadı"));
+
                     Resident newResident = new Resident();
                     newResident.setUser(user);
                     newResident.setFullName(user.getName() + " " + user.getSurname());

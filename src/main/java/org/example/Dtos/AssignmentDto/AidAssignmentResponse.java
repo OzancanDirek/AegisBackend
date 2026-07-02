@@ -32,4 +32,5 @@ public class AidAssignmentResponse
     private LocalDateTime assignedAt;
     private LocalDateTime completedAt;
     private String notes;
+    private LocalDateTime deadline;
 }

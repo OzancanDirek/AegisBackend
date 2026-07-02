@@ -3,6 +3,8 @@ package org.example.Dtos.AssignmentDto;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,4 +20,6 @@ public class CreateAidAssignmentRequest
     private Integer teamId;
 
     private String notes;
+
+    private LocalDateTime deadline;
 }

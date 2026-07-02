@@ -18,7 +18,6 @@ import java.time.LocalDateTime;
 @Builder
 public class AidAssignment
 {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "assignment_id")
@@ -44,6 +43,9 @@ public class AidAssignment
 
     @Column(columnDefinition = "TEXT")
     private String notes;
+
+    @Column(name = "deadline")
+    private LocalDateTime deadline;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)

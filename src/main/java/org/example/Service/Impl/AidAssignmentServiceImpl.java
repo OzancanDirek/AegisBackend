@@ -81,6 +81,7 @@ public class AidAssignmentServiceImpl implements IAidAssignmentService
                 .assignedTeam(team)
                 .status(AssignmentStatus.PENDING)
                 .notes(request.getNotes())
+                .deadline(request.getDeadline())
                 .build();
 
         AidAssignment saved = aidAssignmentRepository.save(assignment);
@@ -142,6 +143,11 @@ public class AidAssignmentServiceImpl implements IAidAssignmentService
             assignment.setStatus(request.getStatus());
             if (request.getStatus() == AssignmentStatus.COMPLETED)
                 assignment.setCompletedAt(LocalDateTime.now());
+        }
+
+        if (request.getDeadline() != null)
+        {
+            assignment.setDeadline(request.getDeadline());
         }
 
         if (request.getNotes() != null)
@@ -221,6 +227,7 @@ public class AidAssignmentServiceImpl implements IAidAssignmentService
                 .assignedAt(a.getAssignedAt())
                 .completedAt(a.getCompletedAt())
                 .notes(a.getNotes())
+                .deadline(a.getDeadline())
                 .build();
     }
 }
