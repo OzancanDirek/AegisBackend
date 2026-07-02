@@ -16,6 +16,7 @@ import org.example.Repository.TeamRepository;
 import org.example.Repository.VolunteerRepository;
 import org.example.Service.IAidAssignmentService;
 import org.example.Service.IAuditService;
+import org.example.Service.IEmailService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -27,7 +28,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional
 public class AidAssignmentServiceImpl implements IAidAssignmentService
 {
     private final AidAssignmentRepository aidAssignmentRepository;
@@ -35,6 +36,7 @@ public class AidAssignmentServiceImpl implements IAidAssignmentService
     private final VolunteerRepository volunteerRepository;
     private final TeamRepository teamRepository;
     private final IAuditService auditService;
+    private final IEmailService emailService;
 
     private String currentUserEmail()
     {
@@ -93,6 +95,21 @@ public class AidAssignmentServiceImpl implements IAidAssignmentService
                 String.valueOf(saved.getAssignmentId()),
                 "Talep #" + request.getRequestId() + " için görev oluşturuldu"
         );
+        try
+        {
+            if (volunteer != null && volunteer.getUser() != null && volunteer.getUser().getEmail() != null)
+            {
+                emailService.sendTaskAssignedEmail(
+                        volunteer.getUser().getEmail(),
+                        volunteer.getUser().getName(),
+                        "Talep #" + request.getRequestId() + (request.getNotes() != null ? " — " + request.getNotes() : "")
+                );
+            }
+        }
+        catch (Exception e)
+        {
+            System.out.println("Mail gönderilemedi: " + e.getMessage());
+        }
 
         return AssignmentResult.builder().success(true).message("Görev başarıyla oluşturuldu").assignmentId(saved.getAssignmentId()).build();
     }

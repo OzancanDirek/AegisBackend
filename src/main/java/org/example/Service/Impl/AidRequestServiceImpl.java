@@ -19,6 +19,7 @@ import org.example.Repository.ResidentRepository;
 import org.example.Repository.UserRepository;
 import org.example.Service.IAidRequestService;
 import org.example.Service.IAuditService;
+import org.example.Service.IEmailService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ public class AidRequestServiceImpl implements IAidRequestService
     private final UserRepository userRepository;
     private final ResidentRepository residentRepository;
     private final IAuditService auditService;
+    private final IEmailService emailService;
 
     private String currentUserEmail()
     {
@@ -97,6 +99,19 @@ public class AidRequestServiceImpl implements IAidRequestService
                 String.valueOf(dto.getRequestId()),
                 "Durum: " + oldStatus + " → " + saved.getStatus().name()
         );
+
+        try
+        {
+            emailService.sendAidRequestStatusEmail(
+                    currentUserEmail(),
+                    saved.getHousehold().getHouseholdName(),
+                    saved.getStatus().name()
+            );
+        }
+        catch (Exception e)
+        {
+            System.out.println("Mail gönderilemedi: " + e.getMessage());
+        }
 
         return toDto(saved);
     }
