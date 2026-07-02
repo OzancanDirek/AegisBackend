@@ -74,4 +74,10 @@ public class JwtUtil
                 .parseClaimsJws(token)
                 .getBody();
     }
+
+    public long getExpirationMs(String token)
+    {
+        Date expiration = parseClaims(token).getExpiration();
+        return expiration.getTime() - System.currentTimeMillis();
+    }
 }

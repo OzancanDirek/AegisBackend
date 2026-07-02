@@ -16,10 +16,4 @@ public class NotificationServiceImpl implements INotificationService
     {
         messagingTemplate.convertAndSend("/topic/"+topic, message);
     }
-
-    @Override
-    public void sendGlobalNotification(String message)
-    {
-        messagingTemplate.convertAndSend("/global/"+message);
-    }
 }
