@@ -74,7 +74,9 @@ public class AdressServiceImpl implements IAdressService
         Adresses saved = addressRepository.save(adresses);
 
         auditService.log(
-                currentUserEmail(), "CREATE", "ADDRESS",
+                currentUserEmail(),
+                "CREATE",
+                "ADDRESS",
                 String.valueOf(saved.getAddressId()),
                 saved.getCity() + " / " + saved.getDistrict() + " / " + saved.getNeighborhood()
         );
@@ -89,7 +91,12 @@ public class AdressServiceImpl implements IAdressService
         if (used)
             throw new RuntimeException("Bu adres bir resident tarafından kullanılıyor");
 
-        auditService.log(currentUserEmail(), "DELETE", "ADDRESS", String.valueOf(adressId), "Adres silindi");
+        auditService.log(
+                currentUserEmail(),
+                        "DELETE",
+                        "ADDRESS",
+                        String.valueOf(adressId),
+                        "Adres silindi");
 
         addressRepository.deleteById(adressId);
     }
@@ -112,7 +119,9 @@ public class AdressServiceImpl implements IAdressService
         Adresses saved = addressRepository.save(adresses);
 
         auditService.log(
-                currentUserEmail(), "UPDATE", "ADDRESS",
+                currentUserEmail(),
+                "UPDATE",
+                "ADDRESS",
                 String.valueOf(adressId),
                 saved.getCity() + " / " + saved.getDistrict() + " / " + saved.getNeighborhood()
         );

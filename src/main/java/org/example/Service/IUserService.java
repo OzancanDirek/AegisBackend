@@ -5,6 +5,7 @@ import org.example.Dtos.LoginResponseDto;
 import org.example.Dtos.RegisterDto;
 import org.example.Dtos.UserDto.UpdateUserRequest;
 import org.example.Dtos.UserDto.UserProfileResponse;
+import org.example.Dtos.UserDto.UserResponseDto;
 import org.example.Dtos.VolunteerDtos.ResultVolunteerDto;
 
 import java.util.List;
@@ -23,4 +24,5 @@ public interface IUserService
 
     UserProfileResponse updateProfile(UUID userId, UpdateUserRequest request);
 
+    void changePassword(UUID userId, String oldPassword, String newPassword);
 }

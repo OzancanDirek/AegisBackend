@@ -9,7 +9,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/test")
-@CrossOrigin(origins = "http://localhost:5173") // React'ın (Vite) varsayılan portu
 public class TestController
 {
 

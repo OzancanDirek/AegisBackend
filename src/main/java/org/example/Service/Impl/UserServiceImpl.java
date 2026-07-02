@@ -150,6 +150,27 @@ public class UserServiceImpl implements IUserService
         return getProfile(userId);
     }
 
+    @Override
+    public void changePassword(UUID userId, String oldPassword, String newPassword)
+    {
+       Users user = userRepository.findById(userId).orElseThrow(()-> new IllegalArgumentException("Kullanici bulunamadi"));
+
+        if (!passwordEncoder.matches(oldPassword, user.getPasswordHash()))
+        {
+            throw new RuntimeException("Eski şifre yanlış");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        auditService.log(
+                user.getEmail(),
+                "CHANGE_PASSWORD",
+                "USER",
+                userId.toString(),
+                "Kullanici sifresi degistirildi"
+        );
+    }
+
     public String getRoleByEmail(String email)
     {
         Users user = userRepository.findByEmail(email)

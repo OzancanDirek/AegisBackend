@@ -9,6 +9,7 @@ import org.example.Repository.AnnouncementRepository;
 import org.example.Repository.UserRepository;
 import org.example.Service.IAnnouncementService;
 import org.example.Service.IAuditService;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -75,8 +76,11 @@ public class AnnouncementServiceImpl implements IAnnouncementService
     @Override
     public List<AnnouncementResponseDto> getTop5ForRole(String role)
     {
-        return announcementRepository.findTop5ByTargetRoleOrNull(role)
-                .stream().map(this::mapToDto).toList();
+        return announcementRepository
+                .findTop5ByTargetRoleOrNull(role, PageRequest.of(0, 5))
+                .stream()
+                .map(this::mapToDto)
+                .toList();
     }
 
     private AnnouncementResponseDto mapToDto(Announcement a)
