@@ -51,6 +51,7 @@ public class SecurityConfig
                         .requestMatchers("/api/teams/**").authenticated()
                         .requestMatchers("/api/users/**").authenticated()
                         .requestMatchers("/api/inventory/**").authenticated()
+                        .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/api/audit/**").hasRole("Admin")
 
 

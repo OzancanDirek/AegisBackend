@@ -17,6 +17,7 @@ import org.example.Repository.VolunteerRepository;
 import org.example.Service.IAidAssignmentService;
 import org.example.Service.IAuditService;
 import org.example.Service.IEmailService;
+import org.example.Service.INotificationService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,7 @@ public class AidAssignmentServiceImpl implements IAidAssignmentService
     private final TeamRepository teamRepository;
     private final IAuditService auditService;
     private final IEmailService emailService;
+    private final INotificationService notificationService;
 
     private String currentUserEmail()
     {
@@ -96,6 +98,7 @@ public class AidAssignmentServiceImpl implements IAidAssignmentService
                 String.valueOf(saved.getAssignmentId()),
                 "Talep #" + request.getRequestId() + " için görev oluşturuldu"
         );
+        notificationService.sendNotification("Yeni Görev Talebi Olusturuldu", String.valueOf(request.getRequestId()));
         try
         {
             if (volunteer != null && volunteer.getUser() != null && volunteer.getUser().getEmail() != null)
@@ -196,6 +199,13 @@ public class AidAssignmentServiceImpl implements IAidAssignmentService
     {
         AidAssignment assignment = aidAssignmentRepository.findById(assignmentId).orElse(null);
         if (assignment == null) return null;
+        auditService.log(
+                currentUserEmail(),
+                "DELETE",
+                "ASSIGNMENT",
+                String.valueOf(assignmentId),
+                "Görev silindi"
+        );
         return toResponse(assignment);
     }
 

@@ -9,6 +9,7 @@ import org.example.Repository.AnnouncementRepository;
 import org.example.Repository.UserRepository;
 import org.example.Service.IAnnouncementService;
 import org.example.Service.IAuditService;
+import org.example.Service.INotificationService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +22,7 @@ public class AnnouncementServiceImpl implements IAnnouncementService
     private final AnnouncementRepository announcementRepository;
     private final UserRepository userRepository;
     private final IAuditService auditService;
+    private final INotificationService notificationService;
 
     @Override
     public AnnouncementResponseDto createAnnouncement(AnnouncementRequestDto dto, String createdByEmail)
@@ -47,6 +49,9 @@ public class AnnouncementServiceImpl implements IAnnouncementService
                         (saved.getTargetRole() != null ? " → " + saved.getTargetRole() : " → Herkese")
         );
 
+        notificationService.sendNotification(
+                saved.getTargetRole() != null ? saved.getTargetRole() : "global",
+                "Yeni duyuru: " + saved.getTitle());
         return mapToDto(saved);
     }
 
